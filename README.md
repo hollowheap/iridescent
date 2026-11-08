@@ -12,6 +12,12 @@ Skill suite for the full delivery loop: brainstorm, design, plan, specify, imple
 - `review` — diff, slice, and robustness review.
 - `retro` — loop and process audit.
 - `modular-design` — module boundaries and seams.
+- `init` — bootstrap AGENTS, context, and architecture.
+- `update` — reconcile artifacts with code.
+- `author-pr` — draft pull request descriptions.
+- `deslop` — remove accidental complexity.
+- `git-commit` — commit verified changes.
+- `merge-worktree` — integrate a worker worktree.
 
 UI work is delegated to the sibling `opal` skill when installed. Lifecycle skills run without it.
 
