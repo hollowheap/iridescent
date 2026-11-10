@@ -1,4 +1,4 @@
-# Slice Review Lens
+# Slice Review Profile
 
 Use when the change claims to deliver a vertical slice.
 

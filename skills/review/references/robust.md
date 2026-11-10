@@ -1,10 +1,10 @@
-# Robustness Review Lens
+# Robustness Review Profile
 
 Use for failure modes, recovery, and workspace-level robustness.
 
 ## Gate
 
-Agent-heavy. Propose the slice roster, concurrency, and output; wait for approval. Default two concurrent, stop at the approved count. Do not spawn primary-role agents.
+Agent-heavy. Propose the slice roster, concurrency, and output; wait for approval. Do not spawn primary-role agents.
 
 ## Workflow
 
@@ -41,7 +41,7 @@ Each finding: `Current` (`file:line`), `Gap`, `Failure/impact`, `Config` (minima
 
 Add `## Failure modes`, `## Seams`, `## Rejected defaults`, and `## Open Questions`. Use existing `Qxx` entries only.
 
-Workspace-scope robustness updates `artifacts/architecture.md` with: System Shape, Module Seams, Dependency Direction, Framework & Library Choices, Data & Contracts, Operations & Security, Known Debt, Evidence. Diff and slice lenses never write it.
+Workspace-scope robustness updates `artifacts/architecture.md` with: System Shape, Module Seams, Dependency Direction, Framework & Library Choices, Data & Contracts, Operations & Security, Known Debt, Evidence. Diff and slice profiles never write it.
 
 ## Examples
 

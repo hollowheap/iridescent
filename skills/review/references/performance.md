@@ -1,6 +1,15 @@
-# Performance Review Lens
+# Performance Lens
 
-Use when the change touches a hot path, large data, startup latency, repeated work, unbounded growth, or a measured regression.
+## Territory
+
+Hot paths, large data, startup latency, repeated work, unbounded growth, and measured regressions.
+
+## Triggers
+
+- The diff adds a loop, query, render, cache, or allocation on a hot path.
+- The diff changes startup, rebuild, scheduling, or background work.
+- The diff handles large or unbounded data.
+- A measurement shows a regression, or the change claims a speedup.
 
 ## Checks
 
@@ -11,4 +20,16 @@ Use when the change touches a hot path, large data, startup latency, repeated wo
 - Check startup and rebuild cost, not only steady-state runtime.
 - Prefer simpler algorithms and existing platform behavior before adding caches or frameworks.
 - Do not trade correctness, security, or clarity for an unmeasured micro-optimization.
-- Verify with the same measurement before and after; report the numbers and the workload.
+
+## Evidence
+
+- Report the measurement command, workload, and before/after numbers.
+- Cite `file:line` for each suspected hotspot.
+
+## Verify
+
+Run the same measurement before and after; report the numbers and the workload.
+
+## Skip
+
+Skip when the diff reaches no hot path, large data, startup cost, repeated work, unbounded growth, or measured regression.

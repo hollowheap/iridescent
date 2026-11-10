@@ -1,49 +1,35 @@
-# Backend Review Lens
+# Backend Lens
 
-Use when the diff touches an endpoint, service, transport, or persistence boundary.
+## Territory
 
-## Authoring
+Endpoints, services, transport, and persistence boundaries.
 
-1. Define request and response schemas at the transport boundary before handler logic.
-2. Keep route handlers thin: validate input, invoke a domain service, map the result.
-3. Keep business logic and queries in pure service functions decoupled from `Request` and `Response`.
-4. Map domain errors to semantic status codes with one uniform error envelope.
-5. Pass timeout signals to external I/O, validate environment variables on boot, and close pools on shutdown.
+## Triggers
 
-## Review checks
+- The diff adds or changes an HTTP handler, RPC method, queue consumer, scheduler, or persistence call.
+- The diff changes a request or response schema, error envelope, timeout, retry, or pool lifecycle.
+- The diff moves logic across a transport or service seam.
 
-- Is every input validated at the edge, including query and path parameters?
-- Is the handler free of database queries and business algorithms?
-- Are stack traces, database errors, and credentials kept out of client responses?
-- Do all failure branches return the same error shape?
-- Are timeouts, idempotency, retries, and pool shutdown explicit?
-- Do tests exercise the seam rather than HTTP mocks of the implementation?
+## Checks
 
-## Pattern
+- Request and response schemas are defined at the transport boundary.
+- Handlers stay thin: validate input, invoke a domain service, map the result.
+- Business logic and queries live in pure service functions decoupled from `Request` and `Response`.
+- Every input is validated at the edge, including query and path parameters.
+- Domain errors map to semantic status codes with one uniform error envelope.
+- Stack traces, database errors, and credentials stay out of client responses.
+- Timeouts, idempotency, retries, and pool shutdown are explicit.
+- Tests exercise the seam rather than HTTP mocks of the implementation.
 
-```typescript
-export const CreateUserSchema = z.object({
-  email: z.string().email(),
-  displayName: z.string().min(2).max(50),
-});
+## Evidence
 
-export async function createUser(
-  input: z.infer<typeof CreateUserSchema>,
-  deps: { userRepo: UserRepository },
-): Promise<Result<User, UserCreationError>> {
-  const existing = await deps.userRepo.findByEmail(input.email);
-  if (existing) return Result.err(new ConflictError("User already exists"));
-  return Result.ok(await deps.userRepo.insert(input));
-}
-
-export async function POST(req: Request, ctx: AppContext): Promise<Response> {
-  const parsed = CreateUserSchema.safeParse(await req.json());
-  if (!parsed.success) return jsonError(422, "Invalid payload", parsed.error.flatten());
-  const result = await createUser(parsed.data, ctx);
-  return result.ok ? jsonResponse(201, result.val) : mapDomainErrorToResponse(result.error);
-}
-```
+- Cite `file:line` for the schema, handler, service, and error mapping.
+- Cite the test command and the failing branch it covers.
 
 ## Verify
 
 Endpoint tests cover valid input, invalid payloads (400/422), expected domain errors, timeout behavior, and clean shutdown.
+
+## Skip
+
+Skip when the diff reaches no endpoint, service, transport, or persistence boundary.

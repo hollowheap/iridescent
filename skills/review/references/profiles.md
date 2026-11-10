@@ -1,5 +1,7 @@
 # Review Profiles
 
+Profiles set scope and persistence. Lenses add territory-specific checks. Simplicity is an always-on check.
+
 ## Profile matrix
 
 | Profile | Inputs | Persistent? | Vxx | Review record | Q writes |
@@ -21,12 +23,36 @@
 - Review never creates `Dxx`, `Sxx`, or `Txx`.
 - No local review resolution IDs; resolution remains `Qxx -> Dxx`.
 
-## Optional lenses
+## Lenses
 
-- UI: rendered interfaces.
+Lenses add checks for the territory the change reaches. They do not change scope, persistence, or review IDs. Every lens has the same shape: Territory, Triggers, Checks, Evidence, Verify, Skip.
+
 - Backend: transport and service boundaries.
 - Security: trust boundaries, auth, secrets, exposure, persistence.
 - Performance: hot paths, large data, startup, repeated work, measured regressions.
+- UI: rendered markup, styles, components, layout, focus, motion, tokens.
+
+Simplicity is an always-on check, not a lens; see `references/simplicity.md`.
+
+## Lens ledger
+
+Every review records one row per lens. Diff reviews include the table in the response. Persistent reviews write it under `## Lens ledger` in the review document.
+
+| Lens | Status | Reason |
+|---|---|---|
+| backend | `considered` / `loaded` / `skipped` | Trigger result or skip reason |
+| security | `considered` / `loaded` / `skipped` | Trigger result or skip reason |
+| performance | `considered` / `loaded` / `skipped` | Trigger result or skip reason |
+| ui | `considered` / `loaded` / `skipped` | Trigger result or skip reason |
+| simplicity | `loaded` | Always on |
+
+Status meanings:
+
+- `loaded`: triggers matched and the checks ran.
+- `considered`: triggers were absent; no checks were needed.
+- `skipped`: triggers matched but the checks did not run. The reason is mandatory.
+
+Do not omit a row. A skipped lens without a row is an unreported gap.
 
 ## Token budget
 

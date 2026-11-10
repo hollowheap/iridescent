@@ -1,6 +1,6 @@
-# Diff Review Lens
+# Diff Review Profile
 
-Use for every patch review unless a more specific lens applies.
+Use for every patch review unless a more specific profile applies.
 
 ## Workflow
 

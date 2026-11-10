@@ -1,6 +1,16 @@
-# Security Review Lens
+# Security Lens
 
-Use when the change reaches a trust boundary, authentication, authorization, secrets, user input, network exposure, or data persistence.
+## Territory
+
+Trust boundaries: authentication, authorization, secrets, user input, network exposure, and persistence.
+
+## Triggers
+
+- The diff adds or changes authentication, authorization, session, or permission logic.
+- The diff handles secrets, credentials, tokens, keys, or user input.
+- The diff changes network exposure, TLS, proxying, firewall rules, or bind addresses.
+- The diff changes persistence, deletion, migration, or file permissions.
+- The diff consumes external or web content.
 
 ## Checks
 
@@ -8,8 +18,20 @@ Use when the change reaches a trust boundary, authentication, authorization, sec
 - Enforce authorization at the operation, not only in the UI.
 - Keep secrets out of logs, errors, process arguments, generated files, and review evidence.
 - Apply least privilege to services, files, sockets, and credentials.
-- Check network exposure: loopback/mesh binding, firewall, TLS, proxy, admin surfaces.
+- Check network exposure: loopback/mesh binding, firewall, TLS, proxy, and admin surfaces.
 - Check failure paths for data loss, partial writes, and secret disclosure.
 - Check dependency and generated-config surface for unnecessary exposure.
 - Preserve validation, authorization, error handling, accessibility, and safety checks when simplifying.
-- Verify with a command that exercises the boundary, not a prose assertion.
+
+## Evidence
+
+- Cite `file:line` for each boundary and every missing check.
+- Cite the command that exercises the boundary.
+
+## Verify
+
+Verify with a command that exercises the boundary, not a prose assertion.
+
+## Skip
+
+Skip when the diff reaches no trust boundary, secret, input, exposure, or persistence path.
