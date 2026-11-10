@@ -16,5 +16,5 @@ Use for every patch review unless a more specific profile applies.
 - Never rewrite the patch wholesale; target the smallest failing seam.
 - Do not add tests that merely restate the implementation.
 - Treat Code Reviewer as read-only; implement fixes in the worker.
-- If the diff touches async work, external I/O, or shared state, load only the Checks section of `references/robust.md`.
+- If the diff touches async work, external I/O, or shared state, load only the Checks section of `references/robust.md`, then resume this profile.
 - Verify: zero high or medium correctness or security findings and the verification suite passes.

@@ -3,7 +3,7 @@
 1. Choose one profile from `references/profiles.md`: `diff` by default, `slice` for a vertical slice, or `robust` for failure-mode or workspace audit.
 2. Read the minimum inputs: parent task/spec/decision, architecture section, changed hunks, and one verification.
 3. Run the always-on checks: `references/simplicity.md`.
-4. Build the lens ledger and run the loaded lenses. Backend triggers on endpoints, services, transport, persistence, schemas, error mapping, timeouts, retries, and pool lifecycle; the other lens triggers live in their files.
+4. Build the lens ledger and run the loaded lenses, then continue. Backend triggers on endpoints, services, transport, persistence, schemas, error mapping, timeouts, retries, and pool lifecycle; the other lens triggers live in their files.
 5. Report findings with `file:line`. The diff profile reports high/medium findings inline, caps five, and stops when none remain; low notes are one line or omitted.
 6. Persistent reviews write `Vxx` through `artifacts/reviews.md`, include the ledger, and record findings only.
 7. Apply minimal patches, re-run the task verification, and record the verdict.
