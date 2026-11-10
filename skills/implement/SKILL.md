@@ -23,6 +23,7 @@ Use only when the change is one file or a small reversible edit with a clear ver
 - Reproduce first; prove with the same command after the fix.
 - Test the public seam, not the implementation; do not add tests that merely mirror code.
 - `next-task` prints the task, spec, decision, and command context; do not load unrelated files.
+- The worker alone changes state. The engineer plans and reviews; Code Reviewer stays read-only.
 - Respect accepted seam invariants; change internal implementation without breaking public boundaries.
 - Apply minimal hunk edits; avoid unsolicited refactoring or premature abstractions.
 - Never add design, spec, plan, or review breakdowns to a task.
