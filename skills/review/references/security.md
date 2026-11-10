@@ -31,7 +31,3 @@ Trust boundaries: authentication, authorization, secrets, user input, network ex
 ## Verify
 
 Verify with a command that exercises the boundary, not a prose assertion.
-
-## Skip
-
-Skip when the diff reaches no trust boundary, secret, input, exposure, or persistence path.

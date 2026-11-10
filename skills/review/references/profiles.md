@@ -25,9 +25,9 @@ Profiles set scope and persistence. Lenses add territory-specific checks. Simpli
 
 ## Lenses
 
-Lenses add checks for the territory the change reaches. They do not change scope, persistence, or review IDs. Every lens has the same shape: Territory, Triggers, Checks, Evidence, Verify, Skip.
+Lenses add checks for the territory the change reaches. They do not change scope, persistence, or review IDs. Every lens has the same shape: Territory, Triggers, Checks, Evidence, Verify.
 
-- Backend: transport and service boundaries.
+- Backend: endpoints, services, transport, persistence, schemas, error mapping, timeouts, retries, and pool lifecycle.
 - Security: trust boundaries, auth, secrets, exposure, persistence.
 - Performance: hot paths, large data, startup, repeated work, measured regressions.
 - UI: rendered markup, styles, components, layout, focus, motion, tokens.
@@ -52,6 +52,8 @@ Status meanings:
 - `considered`: triggers were absent; no checks were needed.
 - `skipped`: triggers matched but the checks did not run. The reason is mandatory.
 
+Skip a lens when no trigger matches. Record the reason in the ledger.
+
 Do not omit a row. A skipped lens without a row is an unreported gap.
 
 ## Token budget
@@ -59,6 +61,6 @@ Do not omit a row. A skipped lens without a row is an unreported gap.
 - diff: no full architecture or review-history reads; no review document; stop at no high/medium findings; low notes one line or omitted.
 - slice/robust: read only the relevant architecture section and review scope; persist `Vxx` and findings only when durable or required.
 
-## Simplicity checks
+## Always on checks
 
-See `references/simplicity.md`. Always on for every profile; lenses change breadth and depth, not whether the check exists.
+See `references/simplicity.md`.

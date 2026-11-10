@@ -22,12 +22,8 @@ Rendered interfaces: markup, styles, components, layout, focus, motion, and desi
 ## Evidence
 
 - Cite the probe report path and summary, or the supplied screenshot and `file:line`.
-- List every check that could not run under unverified.
+- If `opal` is not invoked, list every rendered check under unverified and record the skip reason.
 
 ## Verify
 
 Re-run the probe after fixes and compare the report.
-
-## Skip
-
-Skip when the diff reaches no rendered surface, or when `opal` is not invoked. List rendered checks under unverified.

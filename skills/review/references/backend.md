@@ -29,7 +29,3 @@ Endpoints, services, transport, and persistence boundaries.
 ## Verify
 
 Endpoint tests cover valid input, invalid payloads (400/422), expected domain errors, timeout behavior, and clean shutdown.
-
-## Skip
-
-Skip when the diff reaches no endpoint, service, transport, or persistence boundary.

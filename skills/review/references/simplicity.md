@@ -1,6 +1,6 @@
-# Simplicity Checks (Always On)
+# Always On Checks
 
-Always-on check; never skipped, and not a lens.
+Never skipped; not a lens.
 
 ## Checks
 
@@ -20,7 +20,3 @@ Always-on check; never skipped, and not a lens.
 ## Verify
 
 Prefer the smallest change that removes the duplication or speculative surface; re-run the task verification.
-
-## Skip
-
-Never. Always loaded.

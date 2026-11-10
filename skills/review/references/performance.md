@@ -29,7 +29,3 @@ Hot paths, large data, startup latency, repeated work, unbounded growth, and mea
 ## Verify
 
 Run the same measurement before and after; report the numbers and the workload.
-
-## Skip
-
-Skip when the diff reaches no hot path, large data, startup cost, repeated work, unbounded growth, or measured regression.

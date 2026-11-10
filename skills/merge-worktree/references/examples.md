@@ -17,7 +17,7 @@ For squashed work, create the commit through `{{skill:git-commit}}`; never use `
 ## Bad
 
 - Removing the worktree before running the merged-tree verification.
-- Merging a dirty worker branch or files outside the task scope.
+- Merging a dirty worktree branch or files outside the task scope.
 
 ## Good
 
