@@ -1,10 +1,16 @@
+---
+name: update
+description: Reconcile RDST artifacts with code and architecture.
+disable-model-invocation: true
+---
+
 ## Workflow
 
 1. Inspect workspace reality: `git status`, recent commits, manifests, build runners, and entrypoints.
 2. Verify essential build, check, and test commands in the shell to confirm they pass.
-3. Update `AGENTS.md` with verified commands and conventions; update `artifacts/context.md` with module seams and the architecture pointer.
-4. Reconcile `artifacts/architecture.md` with accepted decisions; refresh system, module, framework/library, data/contract, and operations/security views.
-5. Reconcile questions and decisions: unresolved choices stay in `artifacts/questions.md`; accepted decisions carry `Resolves` and `Resolution`; no orphaned `Dxx` remains.
+3. Update `AGENTS.md` with verified commands and conventions; update `.artifacts/context.md` with module seams and the architecture pointer.
+4. Reconcile `.artifacts/architecture.md` with accepted decisions; refresh system, module, framework/library, data/contract, and operations/security views.
+5. Verify every `Dxx` is accepted and backed by specs or code; remove or resolve any orphaned open decision via `{{skill:design}}`.
 6. Reconcile requirements, specs, and tasks in place after executing their verification commands; keep task records minimal.
 7. Run `scripts/artifacts.sh verify-links` and refresh persistent review records for changed slices.
 
@@ -12,10 +18,10 @@
 
 - Use surgical `sed -i` for flipping `- [ ]` to `- [x]` without rewriting entire artifact files.
 - Never mark an item `[x]` without running its verification check in the shell first.
-- Do not keep orphaned open decisions; unresolved choices belong in `questions.md`, while accepted decisions may stay open until child specs complete.
+- Do not keep orphaned open decisions; accepted decisions stay `[ ]` only until child specs complete.
 - Keep requirement, decision, spec, and task IDs immutable; never renumber existing IDs.
-- Keep `AGENTS.md` verified and scannable; keep `artifacts/context.md` under 60 lines.
-- Commands belong in `AGENTS.md` `## Essential Commands`; `artifacts/context.md` must not have a `## Commands` section.
+- Keep `AGENTS.md` verified and scannable; keep `.artifacts/context.md` under 60 lines.
+- Commands belong in `AGENTS.md` `## Essential Commands`; `.artifacts/context.md` must not have a `## Commands` section.
 - Put any long task-specific runbook, such as a multi-step Playwright or preview workflow, into a project skill at `.claude/skills/<name>/SKILL.md`; keep one line in `AGENTS.md` that points to it.
 - Keep every safety prohibition ("Never …") in `AGENTS.md`; never move one into a skill.
 - Do not write test pass counts into `AGENTS.md`; they become wrong after every change.

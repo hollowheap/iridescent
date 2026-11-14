@@ -4,63 +4,43 @@ Profiles set scope and persistence. Lenses add territory-specific checks. Simpli
 
 ## Profile matrix
 
-| Profile | Inputs | Persistent? | Vxx | Review record | Q writes |
-|---|---|---|---|---|---|
-| diff | parent task/spec, changed hunks, one verification | no | only if durable Qxx | none | only by promoting to Vxx |
-| slice | `R/D/S/T`, relevant architecture section, diff | only if durable | only if durable | findings only | real design unknowns only |
-| robust | full relevant design/architecture/evidence | yes | always | findings only | may write |
+| Profile | Inputs | Persistent? | Vxx | Review record |
+|---|---|---|---|---|
+| diff | parent task/spec, changed hunks, one verification | no | only if durable debt | none |
+| slice | one canonical slice (`R/D/S/T`), architecture section, diff | only if durable | only if durable | findings only |
+| seam | cross-cutting contract/port, consumers, architecture section, diff | only if durable | only if durable | findings only |
+| robust | canonical slice roster, full relevant architecture/evidence | yes | always | findings only |
 
-## Review IDs
+## Review IDs and Design Forks
 
 - Stable IDs are `Vxx`.
-- Only persistent reviews receive one: robustness, architecture/workspace audit, durable slice review.
-- Diff reviews are ephemeral and receive `Vxx` only if they emit a durable `Qxx`.
-- `artifacts/reviews.md` maps `Vxx` to file, mode, and scope.
-
-## Q-write rules
-
-- Review may write `Qxx` to `artifacts/questions.md` under `### Review Vxx — <slice>`.
-- Review never creates `Dxx`, `Sxx`, or `Txx`.
-- No local review resolution IDs; resolution remains `Qxx -> Dxx`.
+- Persistent reviews (`robust`, or durable `slice`/`seam` audits) receive `Vxx` and are indexed in `.artifacts/reviews.md`.
+- Diff reviews are ephemeral; promote to `Vxx` only when durable debt or a cross-slice gap must be tracked.
+- Unresolved design unknowns are reported as **blocking findings** and resolved via `{{skill:design}}` (`Dxx`) before completion. Review never writes `Dxx`, `Sxx`, or `Txx`.
 
 ## Lenses
 
-Lenses add checks for the territory the change reaches. They do not change scope, persistence, or review IDs. Every lens has the same shape: Territory, Triggers, Checks, Evidence, Verify.
+Lenses add checks for the territory the change reaches. Every lens shares the shape: Territory, Triggers, Checks, Evidence, Verify.
 
-- Backend: endpoints, services, transport, persistence, schemas, error mapping, timeouts, retries, and pool lifecycle.
-- Security: trust boundaries, auth, secrets, exposure, persistence.
-- Performance: hot paths, large data, startup, repeated work, measured regressions.
-- UI: rendered markup, styles, components, layout, focus, motion, tokens.
+- Architecture (`architecture.md`): vertical slices, inward dependencies, ports/adapters, composition roots.
+- API (`api.md`): endpoints, RPC, consumers, request/response schemas, edge validation, error envelopes, boundary timeouts/retries.
+- Data (`data.md`): persistence, DB schemas, migrations, transactions, queries, connection/pool lifecycles.
+- Security (`security.md`): trust boundaries, auth, secrets, error redaction, network exposure, permissions.
+- Performance (`performance.md`): hot paths, large data, startup, repeated work, measured regressions.
+- Tests (`tests.md`): red-to-green proof, public-seam assertions, edge coverage, honest doubles, gate integrity.
+- UI (`ui.md`): rendered markup, styles, components, layout, focus, motion, tokens.
 
 Simplicity is an always-on check, not a lens; see `references/simplicity.md`.
 
 ## Lens ledger
 
-Every review records one row per lens. Diff reviews include the table in the response. Persistent reviews write it under `## Lens ledger` in the review document.
+Account for every lens without omitting skipped gaps:
 
-| Lens | Status | Reason |
-|---|---|---|
-| backend | `considered` / `loaded` / `skipped` | Trigger result or skip reason |
-| security | `considered` / `loaded` / `skipped` | Trigger result or skip reason |
-| performance | `considered` / `loaded` / `skipped` | Trigger result or skip reason |
-| ui | `considered` / `loaded` / `skipped` | Trigger result or skip reason |
-| simplicity | `loaded` | Always on |
-
-Status meanings:
-
-- `loaded`: triggers matched and the checks ran.
-- `considered`: triggers were absent; no checks were needed.
-- `skipped`: triggers matched but the checks did not run. The reason is mandatory.
-
-Skip a lens when no trigger matches. Record the reason in the ledger.
-
-Do not omit a row. A skipped lens without a row is an unreported gap.
+- **Diff reviews:** emit one compact line:
+  `Lenses: loaded=[simplicity, ...]; skipped=[lens: reason]; considered=[...]`
+- **Persistent reviews (`slice`, `seam`, `robust`):** include a `## Lens ledger` table (`Lens | Status | Reason`) with one row per lens (`loaded`, `considered`, or `skipped` with mandatory reason) plus `simplicity | loaded | Always on`.
 
 ## Token budget
 
-- diff: no full architecture or review-history reads; no review document; stop at no high/medium findings; low notes one line or omitted.
-- slice/robust: read only the relevant architecture section and review scope; persist `Vxx` and findings only when durable or required.
-
-## Always on checks
-
-See `references/simplicity.md`.
+- `diff`: no full architecture or review-history reads; no review document; stop when zero high/medium findings remain; low notes one line or omitted.
+- `slice` / `seam` / `robust`: read only the relevant slice/seam architecture section and scope; persist `Vxx` and findings only when durable or required.

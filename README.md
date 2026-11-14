@@ -1,26 +1,50 @@
 # iridescent
 
-Skill suite for the full delivery loop: brainstorm, design, plan, specify, implement, review, and retro.
+Skill suite, RDST trace CLI (`scripts/artifacts.sh`), and workspace artifact rules for the RDST delivery loop: `brainstorm` → `design` → `specify` → `plan` → `implement` → `review` → `update`.
 
 ## Skills
 
-- `brainstorm` — explore archetypes and candidate questions.
-- `design` — outcomes, decisions, architecture.
-- `plan` — vertical task breakdown.
-- `specify` — contracts and acceptance.
-- `implement` — test-first delivery.
-- `review` — diff, slice, and robustness review.
-- `retro` — loop and process audit.
-- `modular-design` — module boundaries and seams.
-- `init` — bootstrap AGENTS, context, and architecture.
-- `update` — reconcile artifacts with code.
-- `author-pr` — draft pull request descriptions.
-- `deslop` — remove accidental complexity.
-- `git-commit` — commit verified changes.
-- `merge-worktree` — integrate a worker worktree.
+- `init` — bootstrap `AGENTS.md`, `.gitignore`, `.artifacts/context.md`, and `.artifacts/architecture.md`.
+- `brainstorm` — explore 2–3 contrasting archetypes; bound questions to destination, scope, and hard constraints.
+- `design` — define slice requirements (`Rxx`), accepted decisions (`Dxx`), and `.artifacts/architecture.md`; bound questions to architectural and design forks.
+- `specify` — derive public boundary invariants (`Sxx`) from accepted `Rxx`/`Dxx`; probe only ambiguous seam edge cases.
+- `plan` — split `Sxx` into atomic verified tasks (`Txx`); ask questions only when task granularity, ordering, or verify commands are ambiguous.
+- `implement` — execute the next ready task test-first with `references/tdd.md` and `references/principles.md`; never interrogate with questions during coding (escalate missing contracts or forks back to `specify` or `design`).
+- `review` — audit diffs, slices, seams, and robustness using `references/simplicity.md` and triggered review lenses (`architecture`, `api`, `data`, `security`, `performance`, `tests`, `ui`).
+- `update` — reconcile `AGENTS.md` and `.artifacts/` with workspace reality and settle completed parent checkboxes.
+- `how-to-iridescent` — inspect workspace state, explain the lifecycle loop, and recommend the next skill.
+- `doctor-iridescent` — diagnose and repair workspace layout, migrate legacy `artifacts/` paths to `.artifacts/`, and verify trace links.
 
-UI work is delegated to the sibling `opal` skill when installed. Lifecycle skills run without it.
+UI rendered checks in `review` delegate to the sibling `opal` skill when installed and degrade to `ui: skipped` otherwise.
+
+## Artifacts CLI (`scripts/artifacts.sh`)
+
+Python 3 standard-library CLI bundled into every scripted skill (`scripts/artifacts.sh`) and exposed as the `iridescent-artifacts` Nix package:
+
+```sh
+scripts/artifacts.sh status
+scripts/artifacts.sh unconverted-reqs | unconverted-decs | unconverted-specs
+scripts/artifacts.sh next-id <r|d|s|t>
+scripts/artifacts.sh next-task | frontier
+scripts/artifacts.sh check | verify-links | sync | tree [ID] | trace <ID>
+```
+
+## Rules
+
+- `rules/artifacts.md` — always-on `.artifacts/` placement, `.gitignore` hygiene, RDST locality, and noisy-output redirection rule.
 
 ## Install
 
-Each skill lives under `skills/<name>/SKILL.md` and can be copied into a harness skills directory. `opal` is a separate repo because it ships a binary and design tokens.
+### `npx skills` (`vercel-labs/skills`)
+
+```sh
+npx skills add hollowheap/iridescent
+```
+
+Each `skills/<name>/` directory is self-contained (no cross-skill `../` paths) and includes `scripts/artifacts.sh`. Because `npx skills add` installs `skills/` only, copy or append `rules/artifacts.md` into your harness rule/instruction file (for example `.claude/rules/artifacts.md`, `.kiro/steering/artifacts.md`, or `AGENTS.md`).
+
+### Nix Flake & Home Manager (`flake.nix`)
+
+- `homeManagerModules.default` (`programs.iridescent.enable = true`): installs `iridescent-artifacts` into `home.packages`, renders `skills/` (with `scripts/artifacts.sh` wired to Nix `python3`), and installs `rules/artifacts.md` into enabled harnesses (`claude-code`, `opencode`, `codex`, `crush`, `github-copilot-cli`, `antigravity-cli`, `kiro-cli`, `pi-coding-agent`).
+- `packages.<system>.iridescent-artifacts` (and `default`): standalone `artifacts.sh` / `iridescent-artifacts` CLI derivation.
+- `overlays.default`: overlays `pkgs.iridescent-artifacts`.

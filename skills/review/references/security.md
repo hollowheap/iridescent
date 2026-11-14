@@ -16,7 +16,7 @@ Trust boundaries: authentication, authorization, secrets, user input, network ex
 
 - Validate input at the boundary; never trust caller, file, environment, or web content.
 - Enforce authorization at the operation, not only in the UI.
-- Keep secrets out of logs, errors, process arguments, generated files, and review evidence.
+- Keep secrets, credentials, stack traces, and internal DB errors out of logs, client responses, generated files, and review evidence.
 - Apply least privilege to services, files, sockets, and credentials.
 - Check network exposure: loopback/mesh binding, firewall, TLS, proxy, and admin surfaces.
 - Check failure paths for data loss, partial writes, and secret disclosure.

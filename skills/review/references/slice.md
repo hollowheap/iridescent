@@ -1,23 +1,30 @@
 # Slice Review Profile
 
-Use when the change claims to deliver a vertical slice.
+Use when reviewing one canonical vertical slice defined in `.artifacts/requirements.md` and `.artifacts/architecture.md`.
 
-## Test
+## Scope test
 
 A slice is vertical only when it:
 
-- names one user-visible outcome;
+- corresponds to a single user-visible outcome;
 - includes every layer needed to deliver it;
-- has an end-to-end verification.
+- has one end-to-end verification command.
 
-Reject layer slices (`all config`, `all packages`), unrelated tool lists, and service inventories. Allow at most one explicitly labeled cross-cutting seam.
+Reject layer-only slices (`all config`, `all packages`), unrelated tool lists, and service inventories. Use `references/seam.md` for cross-cutting boundaries instead of bundling them here.
 
 ## Checks
 
-- Does the slice preserve its public seam invariant?
+- Does the slice preserve its public boundary invariants end-to-end?
 - Does the end-to-end command exercise the claimed outcome?
-- Are failure and recovery paths present, not just the happy path?
-- Does the diff add a hidden global or bypass the composition root?
 - Are unrelated tools or services bundled into the slice?
+
+## Failure checks
+
+- Invalid, missing, or hostile inputs are rejected at the boundary.
+- Timeouts, retries, idempotency, and cancellation are explicit on external work.
+- Partial failures cannot leave half-written or unrecoverable state.
+- Concurrency, ordering, and duplicate delivery are handled safely.
+- Resources and locks close cleanly on success, error, and shutdown.
+- Defaults fail safe; recovery cannot depend on undocumented state.
 
 Report findings at `file:line`; do not convert every finding into a new knob.

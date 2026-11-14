@@ -7,4 +7,4 @@
 - Creating `context.md` without an architecture view.
 
 ## Good
-- Confirm `AGENTS.md` does not exist, scout manifests, verify `nix flake check`, and emit initial `AGENTS.md`, `artifacts/context.md`, and `artifacts/architecture.md`.
+- Confirm `AGENTS.md` does not exist, scout manifests, verify `nix flake check`, and emit initial `AGENTS.md`, `.artifacts/context.md`, and `.artifacts/architecture.md`.

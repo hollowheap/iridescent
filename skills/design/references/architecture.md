@@ -9,7 +9,7 @@ Hosts, services, deployment units, data flow, and trust boundaries.
 
 ## Module Seams
 
-Ownership, public boundaries, composition roots, and dependency direction.
+Vertical slices, ownership, public boundaries, explicit composition roots, and inward dependency direction (domain defines ports; adapters depend inward; zero DB/ORM/HTTP imports in core domain).
 
 ## Framework & Library Choices
 

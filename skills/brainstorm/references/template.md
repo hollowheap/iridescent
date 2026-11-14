@@ -4,7 +4,7 @@
 What changes for the user when this is done?
 
 ## References
-Primary sources and the `artifacts/research/<topic>.md` notes.
+Primary sources and the `.artifacts/research/<topic>.md` notes.
 
 ## Archetypes
 - Archetype 1: <Name and philosophy>
@@ -19,10 +19,7 @@ Primary sources and the `artifacts/research/<topic>.md` notes.
 - Failure mode: Archetype 1 (<specific bug>) vs Archetype 2 (<specific drift>)
 
 ## Recommendation
-Which archetype fits repository conventions and why.
-
-## Open Questions
-See `artifacts/questions.md#brainstorm-<topic>`. Do not duplicate question entries here.
+Which archetype fits repository conventions and why, plus any deferred design forks for `design`.
 
 ## Out of scope
 Explicit exclusions.
