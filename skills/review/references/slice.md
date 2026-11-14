@@ -1,6 +1,6 @@
 # Slice Review Profile
 
-Use when reviewing one canonical vertical slice defined in `.artifacts/requirements.md` and `.artifacts/architecture.md`.
+Use when reviewing one canonical vertical slice defined in `.artifacts/REQUIREMENTS.md` and `.artifacts/ARCHITECTURE.md`.
 
 ## Scope test
 

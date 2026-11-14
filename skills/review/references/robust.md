@@ -8,12 +8,12 @@ Agent-heavy. Propose the canonical slice and shared-seam roster, concurrency, an
 
 ## Workflow
 
-1. Preflight: `scripts/artifacts.sh status`; regenerate `.artifacts/repomap.md`; read the canonical vertical slices from `.artifacts/requirements.md` and `.artifacts/architecture.md`; do not start mid-rewrite.
+1. Preflight: `scripts/artifacts.sh status`; regenerate `.artifacts/REPOMAP.md`; read the canonical vertical slices from `.artifacts/REQUIREMENTS.md` and `.artifacts/ARCHITECTURE.md`; do not start mid-rewrite.
 2. Dispatch one read-only subagent per approved slice (applying `references/slice.md` + triggered lenses) and per cross-cutting boundary (`references/seam.md`). Self-contained prompt: repo, slice/seam, option sweep, primary docs, failure paths, report shape, no edits. Persist `.artifacts/review/<slice>.md`.
 3. Reproduce high-impact claims locally. Separate dead config, missing recovery, and missing preference.
 4. Synthesize cross-slice findings by severity: data loss, lockout, exposure, dead config, seam drift. Name contracts; do not turn every finding into a knob.
 5. Flag unresolved design forks as blocking findings routed to `{{skill:design}}`; never write `Rxx` or `Dxx` during review.
-6. Update `.artifacts/architecture.md` with: System Shape, Module Seams, Framework & Library Choices, Data & Contracts, Operations & Security, Known Debt, Evidence. Diff, slice, and seam profiles never write it.
+6. Update `.artifacts/ARCHITECTURE.md` with: System Shape, Module Seams, Framework & Library Choices, Data & Contracts, Operations & Security, Known Debt, Evidence. Diff, slice, and seam profiles never write it.
 
 ## Evidence
 
@@ -30,6 +30,6 @@ Add `## Lens ledger`, `## Failure modes`, `## Seams`, `## Rejected defaults`, an
 
 ## Verify
 
-- `.artifacts/review/<slice>.md` exists for approved slices (`Vxx` indexed in `.artifacts/reviews.md`).
+- `.artifacts/review/<slice>.md` exists for approved slices (`Vxx` indexed in `.artifacts/REVIEWS.md`).
 - Every slice names one user-visible outcome and one end-to-end verification.
 - High-impact claims were reproduced locally, not trusted from a child report.

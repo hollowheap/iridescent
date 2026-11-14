@@ -6,5 +6,5 @@
 - Directly editing source files during an exploratory spike.
 
 ## Good
-- Write a disposable script to `.artifacts/scripts/probe.sh`, test timing, and record the trade-off in `.artifacts/brainstorm.md`.
+- Write a disposable script to `.artifacts/scripts/probe.sh`, test timing, and record the trade-off in `.artifacts/BRAINSTORM.md`.
 - Ask blocking questions via the question tool to pin down user constraints before comparing archetypes.

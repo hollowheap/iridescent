@@ -14,7 +14,7 @@ Profiles set scope and persistence. Lenses add territory-specific checks. Simpli
 ## Review IDs and Design Forks
 
 - Stable IDs are `Vxx`.
-- Persistent reviews (`robust`, or durable `slice`/`seam` audits) receive `Vxx` and are indexed in `.artifacts/reviews.md`.
+- Persistent reviews (`robust`, or durable `slice`/`seam` audits) receive `Vxx` and are indexed in `.artifacts/REVIEWS.md`.
 - Diff reviews are ephemeral; promote to `Vxx` only when durable debt or a cross-slice gap must be tracked.
 - Unresolved design unknowns are reported as **blocking findings** and resolved via `{{skill:design}}` (`Dxx`) before completion. Review never writes `Dxx`, `Sxx`, or `Txx`.
 

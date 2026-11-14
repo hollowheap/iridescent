@@ -44,7 +44,6 @@ class Node:
     verify_cmd: Optional[str] = None
     arch_section: Optional[str] = None
     section: str = ""
-    resolves: List[str] = field(default_factory=list)
     details: List[str] = field(default_factory=list)  # Indented description lines
     file_path: Path = Path()
     line_number: int = 0
@@ -94,7 +93,7 @@ class ArtifactsRepository:
         self.decs: List[Node] = []
         self.specs: List[Node] = []
         self.tasks: List[Node] = []
-        self.task_file = "tasks.md" if (self.root / "tasks.md").is_file() else "plan.md"
+        self.task_file = "TASKS.md" if (self.root / "TASKS.md").is_file() or not (self.root / "PLAN.md").is_file() else "PLAN.md"
         self.parse_all()
 
     def parse_file(self, file_name: str, kind: str) -> List[Node]:
@@ -115,7 +114,6 @@ class ArtifactsRepository:
         verify_inline_re = re.compile(r"(?:\||^-)[ \t]*Verify:[ \t]*(.+)$", re.IGNORECASE)
         verify_detail_re = re.compile(r"^[ \t]*-[ \t]*Verify:[ \t]*(.+)$", re.IGNORECASE)
         arch_detail_re = re.compile(r"^[ \t]*-[ \t]*(?:Arch|Architecture):[ \t]*(.+)$", re.IGNORECASE)
-        resolves_detail_re = re.compile(r"^[ \t]*-[ \t]*Resolves:[ \t]*(.+)$", re.IGNORECASE)
 
         nodes: List[Node] = []
         current: Optional[Node] = None
@@ -207,11 +205,6 @@ class ArtifactsRepository:
                     a_match = arch_detail_re.search(line)
                     if a_match and not current.arch_section:
                         current.arch_section = a_match.group(1).strip().strip("`").strip()
-                    r_match = resolves_detail_re.search(line)
-                    if r_match:
-                        for resolved in re.split(r"[,\s]+", r_match.group(1).strip()):
-                            if resolved and resolved.lower() != "none":
-                                current.resolves.append(normalize_id(resolved))
             else:
                 current = None
 
@@ -219,9 +212,9 @@ class ArtifactsRepository:
 
     def parse_all(self):
         self.nodes.clear()
-        self.reqs = self.parse_file("requirements.md", "REQ")
-        self.decs = self.parse_file("decisions.md", "DEC")
-        self.specs = self.parse_file("specs.md", "SPEC")
+        self.reqs = self.parse_file("REQUIREMENTS.md", "REQ")
+        self.decs = self.parse_file("DECISIONS.md", "DEC")
+        self.specs = self.parse_file("SPECS.md", "SPEC")
         self.tasks = self.parse_file(self.task_file, "TASK")
 
         for node in self.reqs + self.decs + self.specs + self.tasks:
@@ -271,7 +264,7 @@ class ArtifactsRepository:
 
     # Subcommands
     def cmd_status(self):
-        context_file = self.root / "context.md"
+        context_file = self.root / "CONTEXT.md"
         context_status = "present" if context_file.is_file() and context_file.stat().st_size > 0 else "none"
 
         open_reqs = [r for r in self.reqs if not (r.checked and r.is_tree_completed())]
@@ -432,7 +425,7 @@ class ArtifactsRepository:
             sys.exit(1)
 
         did = self.next_id("d")
-        path = self.root / "decisions.md"
+        path = self.root / "DECISIONS.md"
         text = path.read_text(encoding="utf-8") if path.is_file() else "# Architectural Decisions\n"
         if not text.endswith("\n"):
             text += "\n"
@@ -606,7 +599,7 @@ class ArtifactsRepository:
             print(f"Synced {node.kind} {node.id}: {old_s} -> {new_s} (file: {node.file_path.name}:{node.line_number})")
 
     def architecture_sections(self) -> Set[str]:
-        path = self.root / "architecture.md"
+        path = self.root / "ARCHITECTURE.md"
         if not path.is_file():
             return set()
         sections = set()
@@ -615,17 +608,6 @@ class ArtifactsRepository:
             if match:
                 sections.add(match.group(1).strip())
         return sections
-
-    def _question_ids(self) -> Set[str]:
-        path = self.root / "questions.md"
-        if not path.is_file():
-            return set()
-        ids = set()
-        for line in path.read_text(encoding="utf-8").splitlines():
-            match = re.match(r"^[ \t]*-[ \t]*\[[ xX]\][ \t]+(Q\d+)\b", line)
-            if match:
-                ids.add(normalize_id(match.group(1)))
-        return ids
 
     def cmd_verify_links(self):
         errors = 0
@@ -666,9 +648,9 @@ class ArtifactsRepository:
             errors += len(missing_arch_decs)
 
         ungrouped = {
-            "requirements.md": sum(1 for n in self.reqs if not n.section),
-            "decisions.md": sum(1 for n in self.decs if not n.section),
-            "specs.md": sum(1 for n in self.specs if not n.section),
+            "REQUIREMENTS.md": sum(1 for n in self.reqs if not n.section),
+            "DECISIONS.md": sum(1 for n in self.decs if not n.section),
+            "SPECS.md": sum(1 for n in self.specs if not n.section),
             f"{self.task_file}": sum(1 for n in self.tasks if not n.section),
         }
         for file_name, count in ungrouped.items():
@@ -693,7 +675,7 @@ class ArtifactsRepository:
             missing_sections = sorted(required_arch_sections - arch_sections)
             if missing_sections:
                 warnings.append(
-                    "architecture.md missing sections: " + ", ".join(missing_sections)
+                    "ARCHITECTURE.md missing sections: " + ", ".join(missing_sections)
                 )
         for node in self.specs + self.decs:
             if not node.arch_section:
@@ -708,7 +690,7 @@ class ArtifactsRepository:
                     )
                     errors += 1
                 continue
-            if "architecture.md#" in arch or arch.startswith("architecture.md") or "#" in arch or "/" in arch:
+            if "architecture.md#" in arch.lower() or arch.lower().startswith("architecture.md") or "#" in arch or "/" in arch:
                 print(
                     f"Invalid Arch: {node.id} must name an architecture section, not a path "
                     f"({node.file_path.name}:{node.line_number}): {arch}",
@@ -718,128 +700,22 @@ class ArtifactsRepository:
             elif arch not in arch_sections:
                 print(
                     f"Unknown Arch section: {node.id} cites {arch!r}, "
-                    f"not an H2 in architecture.md ({node.file_path.name}:{node.line_number})",
+                    f"not an H2 in ARCHITECTURE.md ({node.file_path.name}:{node.line_number})",
                     file=sys.stderr,
                 )
                 errors += 1
 
-        # 1a. Questions: grouping, duplicate IDs, and resolution links.
-        q_ids: Set[str] = self._question_ids()
-        seen_q: Set[str] = set()
-        q_resolution: Dict[str, str] = {}
-        questions_path = self.root / "questions.md"
-        if questions_path.is_file():
-            question_heading = ""
-            current_q: Optional[str] = None
-            checked = False
-            resolution: Optional[str] = None
-            has_origin = False
-
-            def finish_question() -> None:
-                nonlocal current_q, checked, resolution, has_origin
-                if current_q is None:
-                    return
-                if not question_heading:
-                    print(
-                        f"Question {current_q} is not under an H3 source heading "
-                        f"(questions.md:{current_q_line})",
-                        file=sys.stderr,
-                    )
-                    errors += 1
-                if checked and not resolution:
-                    print(
-                        f"Question {current_q} is resolved but has no Resolution: Dxx "
-                        f"(questions.md:{current_q_line})",
-                        file=sys.stderr,
-                    )
-                    errors += 1
-                if not checked and resolution:
-                    warnings.append(
-                        f"Question {current_q} has Resolution {resolution} but is still open"
-                    )
-                if resolution:
-                    q_resolution[current_q] = resolution
-                    target = self.nodes.get(resolution)
-                    if not target or target.kind != "DEC":
-                        print(
-                            f"Question {current_q} Resolution must name a decision: {resolution} "
-                            f"(questions.md:{current_q_line})",
-                            file=sys.stderr,
-                        )
-                        errors += 1
-                if has_origin:
-                    warnings.append(
-                        f"Question {current_q} repeats source metadata with Origin; move it to the H3 heading"
-                    )
-                current_q = None
-                checked = False
-                resolution = None
-                has_origin = False
-
-            for q_line, q_text in enumerate(
-                questions_path.read_text(encoding="utf-8").splitlines(), start=1
-            ):
-                if q_text.startswith("### "):
-                    finish_question()
-                    question_heading = q_text[4:].strip()
-                    continue
-                if q_text.startswith("## ") or q_text.startswith("# "):
-                    finish_question()
-                    question_heading = ""
-                    continue
-                match = re.match(r"^[ \t]*-[ \t]*\[([ xX])\][ \t]+(Q\d+)\b", q_text)
-                if match:
-                    finish_question()
-                    checked = match.group(1).lower() == "x"
-                    current_q = normalize_id(match.group(2))
-                    current_q_line = q_line
-                    if current_q in seen_q:
-                        print(
-                            f"Duplicate question ID: {current_q} (questions.md:{q_line})",
-                            file=sys.stderr,
-                        )
-                        errors += 1
-                    seen_q.add(current_q)
-                    continue
-                if current_q is None:
-                    continue
-                if re.match(r"^[ \t]*-[ \t]*Origin:", q_text, re.IGNORECASE):
-                    has_origin = True
-                resolution_match = re.match(
-                    r"^[ \t]*-[ \t]*Resolution:[ \t]*(Q?\d+|[D|S|T]\d+)\b",
-                    q_text,
-                    re.IGNORECASE,
-                )
-                if resolution_match:
-                    resolution = normalize_id(resolution_match.group(1))
-                blocks_match = re.match(
-                    r"^[ \t]*-[ \t]*Blocks:[ \t]*(.+)$", q_text, re.IGNORECASE
-                )
-                if blocks_match:
-                    for blocked in re.split(r"[, \t]+", blocks_match.group(1).strip()):
-                        blocked = normalize_id(blocked)
-                        if not blocked or blocked.lower() == "none":
-                            continue
-                        if blocked not in self.nodes and blocked not in q_ids:
-                            print(
-                                f"Question {current_q} Blocks unknown ID: {blocked} "
-                                f"(questions.md:{q_line})",
-                                file=sys.stderr,
-                            )
-                            errors += 1
-            finish_question()
-
-        # 1b. Reference existence check
+        # 1. Reference existence check
         for dec in self.decs:
             for pid in dec.parent_ids:
                 if pid not in self.nodes:
-                    print(f"Missing REQ ID: {pid} (referenced in decisions.md line {dec.line_number})", file=sys.stderr)
+                    print(f"Missing REQ ID: {pid} (referenced in DECISIONS.md line {dec.line_number})", file=sys.stderr)
                     errors += 1
 
         for spec in self.specs:
             for pid in spec.parent_ids:
                 if pid not in self.nodes:
-                    print(f"Missing ID: {pid} (referenced in specs.md line {spec.line_number})", file=sys.stderr)
+                    print(f"Missing ID: {pid} (referenced in SPECS.md line {spec.line_number})", file=sys.stderr)
                     errors += 1
 
         for task in self.tasks:
@@ -864,15 +740,15 @@ class ArtifactsRepository:
                     )
                     errors += 1
 
-        # 3. Line syntax check for specs.md
-        specs_path = self.root / "specs.md"
+        # 3. Line syntax check for SPECS.md
+        specs_path = self.root / "SPECS.md"
         if specs_path.is_file():
             re_spec_allowed = re.compile(
                 r"^([ \t]*|#{1,6}[ \t]+.*|[ \t]*-[ \t]*\[[xX ]\][ \t]+(?:SPEC-|S)\d+(?:[ \t]+\[[^]]+\])+:[ \t]+.+|[ \t][ \t]+.*)$"
             )
             for lno, line in enumerate(specs_path.read_text(encoding="utf-8").splitlines(), start=1):
                 if not re_spec_allowed.match(line):
-                    print(f"Invalid specs.md line {lno}: {line}", file=sys.stderr)
+                    print(f"Invalid SPECS.md line {lno}: {line}", file=sys.stderr)
                     errors += 1
 
         # 4. Kind and cycle checks
@@ -881,7 +757,7 @@ class ArtifactsRepository:
                 if pid in self.nodes and self.nodes[pid].kind != "REQ":
                     print(
                         f"Invalid decision parent: {pid} is {self.nodes[pid].kind}, not REQ "
-                        f"(decisions.md line {dec.line_number})",
+                        f"(DECISIONS.md line {dec.line_number})",
                         file=sys.stderr,
                     )
                     errors += 1
@@ -891,7 +767,7 @@ class ArtifactsRepository:
             if "REQ" not in kinds or "DEC" not in kinds:
                 print(
                     f"Invalid spec parents: need REQ and DEC, got {', '.join(sorted(kinds)) or 'none'} "
-                    f"(specs.md line {spec.line_number})",
+                    f"(SPECS.md line {spec.line_number})",
                     file=sys.stderr,
                 )
                 errors += 1
@@ -905,20 +781,6 @@ class ArtifactsRepository:
                         file=sys.stderr,
                     )
                     errors += 1
-
-        for dec in self.decs:
-            for qid in dec.resolves:
-                if qid not in q_ids:
-                    print(
-                        f"Decision {dec.id} Resolves unknown question: {qid} "
-                        f"(decisions.md:{dec.line_number})",
-                        file=sys.stderr,
-                    )
-                    errors += 1
-                elif q_resolution.get(qid) != dec.id:
-                    warnings.append(
-                        f"Decision {dec.id} cites Resolves: {qid}, but the question does not cite it back"
-                    )
 
         adjacency = {t.id: [b for b in t.blocked_by if b in self.nodes] for t in self.tasks}
         state: Dict[str, int] = {}

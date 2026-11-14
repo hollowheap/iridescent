@@ -4,9 +4,9 @@ Skill suite, RDST trace CLI (`scripts/artifacts.sh`), and workspace artifact rul
 
 ## Skills
 
-- `init` — bootstrap `AGENTS.md`, `.gitignore`, `.artifacts/context.md`, and `.artifacts/architecture.md`.
+- `init` — bootstrap `AGENTS.md`, `.gitignore`, `.artifacts/CONTEXT.md`, and `.artifacts/ARCHITECTURE.md`.
 - `brainstorm` — explore 2–3 contrasting archetypes; bound questions to destination, scope, and hard constraints.
-- `design` — define slice requirements (`Rxx`), accepted decisions (`Dxx`), and `.artifacts/architecture.md`; bound questions to architectural and design forks.
+- `design` — define slice requirements (`Rxx`), accepted decisions (`Dxx`), and `.artifacts/ARCHITECTURE.md`; bound questions to architectural and design forks.
 - `specify` — derive public boundary invariants (`Sxx`) from accepted `Rxx`/`Dxx`; probe only ambiguous seam edge cases.
 - `plan` — split `Sxx` into atomic verified tasks (`Txx`); ask questions only when task granularity, ordering, or verify commands are ambiguous.
 - `implement` — execute the next ready task test-first with `references/tdd.md` and `references/principles.md`; never interrogate with questions during coding (escalate missing contracts or forks back to `specify` or `design`).

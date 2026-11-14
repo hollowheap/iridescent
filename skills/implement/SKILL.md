@@ -26,15 +26,12 @@ Use only when the change is one file or a small reversible edit with a clear ver
 ## Rules
 
 - Follow TDD (`references/tdd.md`) for non-trivial behavior, bugs, and changes with a real seam; trivial one-liners and Quick changes may use the task verify.
-- Follow `references/principles.md` across touched boundaries while coding; never read `references/examples.md`.
-- Do not interrogate the user with questions during implementation; if a spec or design decision is missing or contradicts the codebase, stop and escalate to `{{skill:specify}}` or `{{skill:design}}`.
+- Follow `references/principles.md` across touched boundaries while coding.
+- Escalate missing contracts or design forks to `{{skill:specify}}` or `{{skill:design}}`.
 - Reproduce first; prove with the same command after the fix.
-- Test the public seam, not the implementation; do not add tests that merely mirror code.
-- `next-task` prints the task, spec, decision, and command context; do not load unrelated files.
-- The worker alone changes state. The engineer plans and reviews; Code Reviewer stays read-only.
-- Respect accepted seam invariants; change internal implementation without breaking public boundaries.
-- Apply minimal hunk edits; avoid unsolicited refactoring or premature abstractions.
-- Never add design, spec, plan, or review breakdowns to a task.
-- Do not start a task whose plan is blocked; do not mark it complete without final review acceptance.
-- Never mark parent specs or decisions complete.
-- Verify: failing check went green, task verify passes, final review is accepted, and `.artifacts/tasks.md` reflects `- [x] Txx`.
+- Test the public seam and observable behavior.
+- Use the task, spec, decision, and command context from `next-task`.
+- The worker alone changes state; the engineer plans and reviews, and Code Reviewer stays read-only.
+- Respect accepted seam invariants and apply minimal hunk edits.
+- Mark a task complete only after its verification and final review are accepted; parent specs and decisions derive completion from child references.
+- Verify: failing check went green, task verify passes, final review is accepted, and `.artifacts/TASKS.md` reflects `- [x] Txx`.

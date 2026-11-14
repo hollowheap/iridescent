@@ -12,14 +12,13 @@ disable-model-invocation: true
 4. Clarify destination, scope boundaries, and hard constraints interactively with the question tool; block if a core constraint is unanswered, and defer concrete design, contract, and task questions to `{{skill:design}}`.
 5. If feasibility probing is needed, write disposable scripts into `.artifacts/scripts/`.
 6. Formulate and compare 2-3 distinct architectural, code-organization, or UX archetypes against coupling, discoverability, blast radius, YAGNI, and failure modes.
-7. Emit the recommendation, trade-off matrix, and any deferred design forks to `.artifacts/brainstorm.md` using `references/template.md`.
+7. Emit the recommendation, trade-off matrix, and any deferred design forks to `.artifacts/BRAINSTORM.md` using `references/template.md`.
 
 ## Rules
 
-- Research only when the domain is unfamiliar or contested; primary sources only, never a literature review.
+- Research only when the domain is unfamiliar or contested; primary sources only.
 - Design research lives in `.artifacts/research/`; audit evidence lives in `.artifacts/review/`.
-- Explore structural trade-offs; never commit to implementation.
-- Never edit production source files or git state; write test probes only to `.artifacts/scripts/`.
-- Always compare at least 2 contrasting alternatives with explicit failure modes.
-- Keep questions bounded to problem framing, scope, and constraints; resolve them inline with the question tool and never maintain a separate questions file.
-- Verify: `.artifacts/brainstorm.md` has Destination, References, Archetypes, Trade-offs, Recommendation, and Out of scope.
+- Explore structural trade-offs and compare at least 2 contrasting alternatives with explicit failure modes.
+- Write disposable test probes only to `.artifacts/scripts/`.
+- Keep questions bounded to problem framing, scope, and constraints; resolve them inline with the question tool.
+- Verify: `.artifacts/BRAINSTORM.md` has Destination, References, Archetypes, Trade-offs, Recommendation, and Out of scope.

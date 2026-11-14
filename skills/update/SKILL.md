@@ -7,22 +7,17 @@ disable-model-invocation: true
 ## Workflow
 
 1. Inspect workspace reality: `git status`, recent commits, manifests, build runners, and entrypoints.
-2. Verify essential build, check, and test commands in the shell to confirm they pass.
-3. Update `AGENTS.md` with verified commands and conventions; update `.artifacts/context.md` with module seams and the architecture pointer.
-4. Reconcile `.artifacts/architecture.md` with accepted decisions; refresh system, module, framework/library, data/contract, and operations/security views.
-5. Verify every `Dxx` is accepted and backed by specs or code; remove or resolve any orphaned open decision via `{{skill:design}}`.
-6. Reconcile requirements, specs, and tasks in place after executing their verification commands; keep task records minimal.
-7. Run `scripts/artifacts.sh verify-links` and refresh persistent review records for changed slices.
+2. Run essential build, check, and targeted test commands in the shell to confirm they pass.
+3. Reconcile `AGENTS.md`, `.artifacts/CONTEXT.md`, and `.artifacts/ARCHITECTURE.md` with workspace reality using `references/template.md`.
+4. Verify every `Dxx` is accepted and backed by specs or code; resolve any orphaned open decision via `{{skill:design}}`.
+5. Reconcile requirements, specs, and tasks in place after executing their verification commands; keep task records minimal.
+6. Run `scripts/artifacts.sh verify-links` and refresh persistent review records for changed slices.
 
 ## Rules
 
-- Use surgical `sed -i` for flipping `- [ ]` to `- [x]` without rewriting entire artifact files.
-- Never mark an item `[x]` without running its verification check in the shell first.
-- Do not keep orphaned open decisions; accepted decisions stay `[ ]` only until child specs complete.
-- Keep requirement, decision, spec, and task IDs immutable; never renumber existing IDs.
-- Keep `AGENTS.md` verified and scannable; keep `.artifacts/context.md` under 60 lines.
-- Commands belong in `AGENTS.md` `## Essential Commands`; `.artifacts/context.md` must not have a `## Commands` section.
-- Put any long task-specific runbook, such as a multi-step Playwright or preview workflow, into a project skill at `.claude/skills/<name>/SKILL.md`; keep one line in `AGENTS.md` that points to it.
-- Keep every safety prohibition ("Never …") in `AGENTS.md`; never move one into a skill.
-- Do not write test pass counts into `AGENTS.md`; they become wrong after every change.
-- Verify: `scripts/artifacts.sh verify-links` outputs OK, architecture is current, no orphaned open decisions remain, and persistent review records reflect the changed slices.
+- Follow the section structure and `<= 60` line budgets for `AGENTS.md` and `.artifacts/CONTEXT.md` in `references/template.md`.
+- Keep `AGENTS.md` focused on high-signal agent guidance: verified build/test/single-test commands, non-obvious repo invariants, and safety rules.
+- Put multi-step task runbooks into a project skill and keep one pointer line in `AGENTS.md`.
+- Use surgical `sed -i` for flipping `- [ ]` to `- [x]` after running the item's verification check in the shell.
+- Keep requirement, decision, spec, and task IDs immutable.
+- Verify: `scripts/artifacts.sh verify-links` outputs OK, `AGENTS.md` and `.artifacts/CONTEXT.md` match `references/template.md` (`<= 60` lines each), no orphaned open decisions remain, and persistent review records reflect changed slices.
