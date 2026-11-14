@@ -4,16 +4,16 @@ Use for whole-system failure-mode, recovery, and cross-slice workspace audits. C
 
 ## Gate
 
-Agent-heavy. Propose the canonical slice and shared-seam roster, concurrency, and output; wait for approval. Do not spawn primary-role agents.
+Agent-heavy. Propose the canonical slice and shared-seam roster, concurrency, and output; wait for approval and spawn only read-only subagents.
 
 ## Workflow
 
-1. Preflight: `scripts/artifacts.sh status`; regenerate `.artifacts/REPOMAP.md`; read the canonical vertical slices from `.artifacts/REQUIREMENTS.md` and `.artifacts/ARCHITECTURE.md`; do not start mid-rewrite.
+1. Preflight: `scripts/iridescent-artifacts status`; read the canonical vertical slices from `.artifacts/REQUIREMENTS.md` and `.artifacts/ARCHITECTURE.md`; start only from a clean baseline, never mid-rewrite.
 2. Dispatch one read-only subagent per approved slice (applying `references/slice.md` + triggered lenses) and per cross-cutting boundary (`references/seam.md`). Self-contained prompt: repo, slice/seam, option sweep, primary docs, failure paths, report shape, no edits. Persist `.artifacts/review/<slice>.md`.
 3. Reproduce high-impact claims locally. Separate dead config, missing recovery, and missing preference.
-4. Synthesize cross-slice findings by severity: data loss, lockout, exposure, dead config, seam drift. Name contracts; do not turn every finding into a knob.
-5. Flag unresolved design forks as blocking findings routed to `{{skill:design}}`; never write `Rxx` or `Dxx` during review.
-6. Update `.artifacts/ARCHITECTURE.md` with: System Shape, Module Seams, Framework & Library Choices, Data & Contracts, Operations & Security, Known Debt, Evidence. Diff, slice, and seam profiles never write it.
+4. Synthesize cross-slice findings by severity: data loss, lockout, exposure, dead config, seam drift. Name concrete contracts; never turn every finding into a knob.
+5. Flag unresolved design forks as blocking findings routed strictly to the `design` skill; never write `Rxx`, `Dxx`, `Sxx`, or `Txx` during review.
+6. Update `.artifacts/ARCHITECTURE.md` strictly under the `robust` profile (`diff`, `slice`, and `seam` profiles remain strictly read-only on it) with: System Shape, Module Seams, Framework & Library Choices, Data & Contracts, Operations & Security, Known Debt, Evidence.
 
 ## Evidence
 

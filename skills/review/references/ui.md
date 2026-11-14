@@ -12,7 +12,7 @@ Rendered interfaces: markup, styles, components, layout, focus, motion, and desi
 
 ## Checks
 
-- When `opal` is active, run `~/.opal/bin/ui-probe audit <url>` and `~/.opal/bin/ui-probe source .`; cite the report summary.
+- When the `opal` skill is active, run its `ui-probe` CLI (`ui-probe audit <url>` and `ui-probe source .`); cite the report summary.
 - Check accessible names, roles, and state (`aria-expanded`, `aria-controls`, `aria-selected`).
 - Check visible focus, keyboard order, and activation behavior.
 - Check contrast, layout, overflow, and touch targets against the design tokens.

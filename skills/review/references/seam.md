@@ -5,7 +5,7 @@ Use when reviewing or refactoring a cross-cutting boundary, shared port, schema,
 ## Checks
 
 - Does the public boundary invariant hold for every consumer slice?
-- Do dependencies point inward (`architecture.md`) without hidden globals or back-channel coupling?
+- Do dependencies point inward (`.artifacts/ARCHITECTURE.md`) without hidden globals or back-channel coupling?
 - Are existing consumers protected against silent breaking changes (or migrated together)?
 - Is the abstraction justified by multiple real adapters or a true external boundary (`simplicity.md`)?
 - Are error semantics, validation responsibilities, and edge-case failure behavior unambiguous on both sides of the seam?

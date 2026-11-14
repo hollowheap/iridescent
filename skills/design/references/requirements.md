@@ -13,7 +13,6 @@ Group requirements by vertical slice under meaningful H3 headings. Use `### Cros
 
 ## Rules
 
-- Describe what changes for the user, not how it is built.
-- Never name a file, module, framework, library, option, or API.
+- Describe strictly what changes for the user (observable outcomes), never how it is built.
+- Never name a file, module, framework, library, option, or API; move every solution choice to a decision.
 - Keep one outcome per requirement.
-- Move every solution choice to a decision.

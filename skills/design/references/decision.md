@@ -12,6 +12,6 @@ Group accepted decisions under the exact architecture H2 heading: `### System Sh
 
 ## Rules
 
-- Record accepted decisions only; resolve ambiguities via the question tool before writing a decision. An accepted decision may remain `[ ]` until its child specs complete.
-- The H3 heading is the architecture reference; it must exactly match an H2 in `ARCHITECTURE.md`.
-- Include `Supersedes` only when replacing an earlier decision.
+- Record accepted decisions only; resolve ambiguities via the question tool before writing a decision. An accepted decision may remain `[ ]` only until its child specs complete.
+- The H3 heading is the sole architecture reference; it must match an H2 in `ARCHITECTURE.md` exactly. Include strictly `Context`, `Alternatives`, `Consequences`, and optional `Supersedes`; never add a per-decision `Arch:` or `Verify:` field (verification belongs strictly to child specs).
+- Include `Supersedes` only when replacing an earlier decision; omit it when it does not apply.

@@ -14,8 +14,9 @@ disable-model-invocation: true
 
 ## Rules
 
-- Follow the section structure and `<= 60` line budgets for `AGENTS.md` and `.artifacts/CONTEXT.md` in `references/template.md`.
-- Keep `AGENTS.md` focused on high-signal agent guidance: verified build/test/single-test commands, non-obvious repo invariants, and safety rules.
+- Follow the section structure and `<= 60` line budgets strictly for `AGENTS.md` and `.artifacts/CONTEXT.md` in `references/template.md`.
+- Keep in `AGENTS.md` strictly high-signal guidance: verified build/test/single-test commands, non-obvious repo invariants, and all global "Never ..." safety rules (never move safety rules into skills, never include `.artifacts/` pointers, and never write test pass counts in `AGENTS.md`).
+- Keep `.artifacts/CONTEXT.md` limited strictly to `## Stack & Entrypoints` and `## Module Seams` (document strictly high-level seams and entrypoints, never internal functions or `## Commands`).
 - Put multi-step task runbooks into a project skill and keep one pointer line in `AGENTS.md`.
-- Run every command in the shell before recording it in `AGENTS.md`.
+- Record only commands you executed and observed pass in the shell.
 - Verify: `AGENTS.md` and `.artifacts/CONTEXT.md` are under 60 lines and match `references/template.md`; `.gitignore` includes `.artifacts/`; `.artifacts/ARCHITECTURE.md` defines all required sections.

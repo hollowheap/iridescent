@@ -13,7 +13,7 @@ Use for every patch review unless a broader profile applies.
 
 ## Rules
 
-- Never rewrite the patch wholesale; target the smallest failing seam.
-- Treat Code Reviewer as read-only; implement fixes in the worker.
+- Apply strictly surgical patches at the smallest failing seam; never rewrite the patch wholesale.
+- Treat Code Reviewer as read-only; implement fixes strictly in the worker.
 - If the diff touches async work, external I/O, or shared state, load only `## Failure checks` from `references/slice.md`, then resume this profile.
 - Verify: zero high or medium findings, compact lens ledger recorded, and verification passes.

@@ -7,5 +7,5 @@
 - Marking a spec `[x]` without executing its Verify check.
 
 ## Good
-- Run `sed -i 's/^- \[ \] T01:/- [x] T01:/' .artifacts/TASKS.md`, verify the build passes, and run `scripts/artifacts.sh verify-links`.
+- Run `sed -i 's/^- \[ \] T01:/- [x] T01:/' .artifacts/TASKS.md`, verify the build passes, and run `scripts/iridescent-artifacts verify-links`.
 - Update `ARCHITECTURE.md` from accepted decisions and ensure every `Dxx` traces to specs or code.

@@ -16,12 +16,12 @@ disable-model-invocation: true
 
 ## Rules
 
-- Review runs after implementation.
-- Load `references/simplicity.md`, the active profile reference, and lenses whose trigger matches the diff; account for every lens in the ledger.
-- Diff review is ephemeral unless durable debt promotes it to a persistent review.
-- Persistent review documents live in `.artifacts/review/<slice>.md` and record findings.
-- Report unresolved design forks as blocking findings for `{{skill:design}}`.
+- Run review strictly after implementation; it does not gate requirements, design, specification, or planning.
+- Load only `references/simplicity.md`, the active profile reference, and lenses whose trigger matches the diff (never untriggered lenses, unused profiles, or `references/examples.md`); account strictly for every lens in the ledger without silent skips.
+- Keep diff review strictly ephemeral (no review document and no `Vxx`) unless durable debt promotes it to a persistent review.
+- Persistent review documents live in `.artifacts/review/<slice>.md` and contain strictly findings, not phase checklists.
+- Report unresolved design forks as blocking findings routed strictly to the `design` skill; write only `Vxx` and `.artifacts/review/<slice>.md` (only `robust` updates `.artifacts/ARCHITECTURE.md`, and never write `Rxx`, `Dxx`, `Sxx`, or `Txx` during review).
 - Rendered checks require `opal`; otherwise mark them unverified and record `ui: skipped`.
 - Correctness, security, and unresolved design findings block completion.
-- Treat Code Reviewer as read-only; implement fixes in the worker.
+- Treat Code Reviewer as read-only; implement fixes strictly in the worker.
 - Verify: profile inputs, lens ledger, `Vxx` rules, and verification commands are complete.

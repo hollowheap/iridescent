@@ -16,16 +16,15 @@ Reproduce the reported failure with a failing test or command before editing. Fi
 
 ## Config and eval work
 
-Use the failing `nix eval`, `nix build`, or task verification command as the red check when a unit test is not meaningful. Do not invent a test that merely restates the generated config.
+Use the failing `nix eval`, `nix build`, or task verification command directly as the red check when a unit test is not meaningful; never invent a test that merely restates the generated config.
 
 ## Test quality
 
-- Test the public seam, not private implementation steps.
-- One meaningful assertion per behavior; do not restate implementation.
+- Assert observable behavior strictly at the public seam with one meaningful assertion per behavior; never mirror implementation steps.
 - Keep tests deterministic and independent of host state unless the task is explicitly integration-level.
 - One small test is enough for a branch, loop, parser, money, security, or data-loss path.
-- Trivial one-liners may use the task verify without a new test.
+- Trivial one-liners may use the task verify directly.
 
 ## Exceptions
 
-Skip test-first only when no meaningful failing check can be expressed before the change. Record why in the task notes; do not use this exception to avoid verification.
+Skip test-first strictly when no failing check can be expressed beforehand; record the reason in task notes and always run the task verification command (never use this exception to avoid verification).
