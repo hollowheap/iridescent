@@ -12,9 +12,41 @@ import argparse
 import os
 import re
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
+
+HEADER_RE = re.compile(
+    r"^[ \t]*-[ \t]*\[([ xX])\][ \t]+((?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+)\b(.*?)$"
+)
+BRACKET_RE = re.compile(
+    r"\[((?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+(?:\s*,\s*(?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+)*)\]"
+)
+BLOCKED_TRAILING_RE = re.compile(
+    r"\[((?:TASK-|T)\d+(?:\s*,\s*(?:TASK-|T)\d+)*)\]\s*(?=:|$)", re.IGNORECASE
+)
+LEGACY_BLOCKED_RE = re.compile(r"\(blocked-by:[ \t]*([^)]+)\)", re.IGNORECASE)
+VERIFY_INLINE_RE = re.compile(r"(?:\||^-)[ \t]*Verify:[ \t]*(.+)$", re.IGNORECASE)
+VERIFY_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Verify:[ \t]*(.+)$", re.IGNORECASE)
+ARCH_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*(?:Arch|Architecture):[ \t]*(.+)$", re.IGNORECASE)
+REFORMAT_VERIFY_RE = re.compile(r"^(\s*-\s*\[[ xX]\].*?)\s*\|\s*Verify:\s*(.*)$")
+
+
+def atomic_write_text(path: Path, content: str) -> None:
+    """Write text atomically via a temporary file in the destination directory."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
 
 
 def normalize_id(raw: str) -> str:
@@ -89,6 +121,7 @@ class ArtifactsRepository:
             self.root = artifacts_dir
 
         self.nodes: Dict[str, Node] = {}
+        self.duplicate_ids: List[Tuple[str, Node, Node]] = []
         self.reqs: List[Node] = []
         self.decs: List[Node] = []
         self.specs: List[Node] = []
@@ -100,20 +133,6 @@ class ArtifactsRepository:
         path = self.root / file_name
         if not path.is_file():
             return []
-
-        header_re = re.compile(
-            r"^[ \t]*-[ \t]*\[([ xX])\][ \t]+((?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+)\b(.*?)$"
-        )
-        bracket_re = re.compile(
-            r"\[((?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+(?:\s*,\s*(?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+)*)\]"
-        )
-        blocked_trailing_re = re.compile(
-            r"\[((?:TASK-|T)\d+(?:\s*,\s*(?:TASK-|T)\d+)*)\]\s*(?=:|$)", re.IGNORECASE
-        )
-        legacy_blocked_re = re.compile(r"\(blocked-by:[ \t]*([^)]+)\)", re.IGNORECASE)
-        verify_inline_re = re.compile(r"(?:\||^-)[ \t]*Verify:[ \t]*(.+)$", re.IGNORECASE)
-        verify_detail_re = re.compile(r"^[ \t]*-[ \t]*Verify:[ \t]*(.+)$", re.IGNORECASE)
-        arch_detail_re = re.compile(r"^[ \t]*-[ \t]*(?:Arch|Architecture):[ \t]*(.+)$", re.IGNORECASE)
 
         nodes: List[Node] = []
         current: Optional[Node] = None
@@ -137,7 +156,7 @@ class ArtifactsRepository:
                 current = None
                 continue
 
-            m = header_re.match(line)
+            m = HEADER_RE.match(line)
             if m:
                 checked = m.group(1).lower() == "x"
                 raw_id = m.group(2)
@@ -145,15 +164,15 @@ class ArtifactsRepository:
                 rest = m.group(3)
 
                 blocked_by = []
-                b_match = blocked_trailing_re.search(rest)
+                b_match = BLOCKED_TRAILING_RE.search(rest)
                 if b_match:
                     raw_deps = b_match.group(1)
                     rest = rest[: b_match.start()].rstrip()
                 else:
-                    b_match = legacy_blocked_re.search(rest)
+                    b_match = LEGACY_BLOCKED_RE.search(rest)
                     if b_match:
                         raw_deps = b_match.group(1)
-                        rest = legacy_blocked_re.sub("", rest)
+                        rest = LEGACY_BLOCKED_RE.sub("", rest)
                     else:
                         raw_deps = ""
 
@@ -163,21 +182,21 @@ class ArtifactsRepository:
                         blocked_by.append(normalize_id(dep))
 
                 parent_ids = []
-                for group in bracket_re.findall(rest):
+                for group in BRACKET_RE.findall(rest):
                     for part in re.split(r"\s*,\s*", group):
                         part = part.strip()
                         if part:
                             parent_ids.append(normalize_id(part))
 
                 verify_cmd = None
-                v_match = verify_inline_re.search(rest)
+                v_match = VERIFY_INLINE_RE.search(rest)
                 if v_match:
                     verify_cmd = v_match.group(1).strip()
 
                 title = rest
-                title = bracket_re.sub("", title)
+                title = BRACKET_RE.sub("", title)
                 if verify_cmd:
-                    title = verify_inline_re.sub("", title)
+                    title = VERIFY_INLINE_RE.sub("", title)
                 title = title.strip().lstrip(":").strip().rstrip("|").strip()
 
                 current = Node(
@@ -199,10 +218,10 @@ class ArtifactsRepository:
             elif current and (line.startswith("  ") or line.startswith("\t") or line.strip() == ""):
                 if line.strip():
                     current.details.append(line)
-                    v_match = verify_detail_re.search(line)
+                    v_match = VERIFY_DETAIL_RE.search(line)
                     if v_match and not current.verify_cmd:
                         current.verify_cmd = v_match.group(1).strip()
-                    a_match = arch_detail_re.search(line)
+                    a_match = ARCH_DETAIL_RE.search(line)
                     if a_match and not current.arch_section:
                         current.arch_section = a_match.group(1).strip().strip("`").strip()
             else:
@@ -212,13 +231,17 @@ class ArtifactsRepository:
 
     def parse_all(self):
         self.nodes.clear()
+        self.duplicate_ids.clear()
         self.reqs = self.parse_file("REQUIREMENTS.md", "REQ")
         self.decs = self.parse_file("DECISIONS.md", "DEC")
         self.specs = self.parse_file("SPECS.md", "SPEC")
         self.tasks = self.parse_file(self.task_file, "TASK")
 
         for node in self.reqs + self.decs + self.specs + self.tasks:
-            self.nodes[node.id] = node
+            if node.id in self.nodes:
+                self.duplicate_ids.append((node.id, self.nodes[node.id], node))
+            else:
+                self.nodes[node.id] = node
 
         # Build tree edges
         # Tasks -> Specs
@@ -415,8 +438,9 @@ class ArtifactsRepository:
         title: str,
         alternatives: str,
         consequences: str,
-        verify: Optional[str] = None,
+        arch: str = "System Shape",
         context: Optional[str] = None,
+        supersedes: Optional[str] = None,
     ):
         req_id = normalize_id(req_raw)
         req = self.nodes.get(req_id)
@@ -424,9 +448,18 @@ class ArtifactsRepository:
             print(f"Error: {req_raw} is not a known requirement", file=sys.stderr)
             sys.exit(1)
 
+        arch_clean = arch.strip()
+        arch_sections = self.architecture_sections()
+        if arch_sections and arch_clean not in arch_sections:
+            print(
+                f"Error: {arch_clean!r} is not an H2 section in ARCHITECTURE.md",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
         did = self.next_id("d")
         path = self.root / "DECISIONS.md"
-        text = path.read_text(encoding="utf-8") if path.is_file() else "# Architectural Decisions\n"
+        text = path.read_text(encoding="utf-8") if path.is_file() else "# Decision Record\n"
         if not text.endswith("\n"):
             text += "\n"
         lines = [f"- [ ] {did} [{req_id}]: {title}"]
@@ -434,16 +467,34 @@ class ArtifactsRepository:
             lines.append(f"  - Context: {context}")
         lines.append(f"  - Alternatives: {alternatives}")
         lines.append(f"  - Consequences: {consequences}")
-        if verify:
-            lines.append(f"  - Verify: {verify}")
+        if supersedes:
+            lines.append(f"  - Supersedes: {normalize_id(supersedes)}")
         entry = "\n".join(lines) + "\n"
-        marker = "\n## Non-Goals"
-        if marker in text:
-            head, tail = text.split(marker, 1)
-            text = head.rstrip() + "\n\n" + entry + marker + tail
+
+        heading = f"### {arch_clean}"
+        doc_lines = text.splitlines()
+        insert_idx: Optional[int] = None
+        for idx, line in enumerate(doc_lines):
+            if line.strip() == heading:
+                insert_idx = idx + 1
+                while insert_idx < len(doc_lines) and not doc_lines[insert_idx].startswith(("### ", "## ", "# ")):
+                    insert_idx += 1
+                break
+
+        if insert_idx is not None:
+            before = "\n".join(doc_lines[:insert_idx]).rstrip()
+            after = "\n".join(doc_lines[insert_idx:]).lstrip("\n")
+            new_text = before + "\n\n" + entry + ("\n" + after + "\n" if after else "")
         else:
-            text = text.rstrip() + "\n\n" + entry
-        path.write_text(text, encoding="utf-8")
+            marker = "\n## Non-Goals"
+            section_block = f"{heading}\n\n{entry}"
+            if marker in text:
+                head, tail = text.split(marker, 1)
+                new_text = head.rstrip() + "\n\n" + section_block + marker + tail
+            else:
+                new_text = text.rstrip() + "\n\n" + section_block
+
+        atomic_write_text(path, new_text)
         print(did)
 
     def cmd_tree(self, target_id: Optional[str] = None):
@@ -552,6 +603,15 @@ class ArtifactsRepository:
         Settle parent checkboxes bottom-up according to child completion tree.
         "The parent is only completed when all the child is completed."
         """
+        if self.duplicate_ids:
+            for dup_id, first, dup in self.duplicate_ids:
+                print(
+                    f"Duplicate ID: {dup_id} in {dup.file_path.name}:{dup.line_number} "
+                    f"and {first.file_path.name}:{first.line_number}",
+                    file=sys.stderr,
+                )
+            sys.exit(1)
+
         changes: List[Tuple[Node, bool, bool]] = []
 
         # Bottom-up order: SPECs -> DECs -> REQs
@@ -591,7 +651,7 @@ class ArtifactsRepository:
                 )
                 lines[line_idx] = updated
 
-            file_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            atomic_write_text(file_path, "\n".join(lines) + "\n")
 
         for node, old_state, new_state in changes:
             old_s = "[x]" if old_state else "[ ]"
@@ -820,11 +880,10 @@ class ArtifactsRepository:
     def reformat_file(self, path: Path) -> int:
         if not path.is_file():
             return 0
-        lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+        lines = path.read_text(encoding="utf-8").splitlines()
         new_lines = []
         in_fence = False
         reformatted_count = 0
-        pattern = re.compile(r"^(\s*-\s*\[[ xX]\].*?)\s*\|\s*Verify:\s*(.*)$")
 
         for line in lines:
             stripped = line.strip()
@@ -837,7 +896,7 @@ class ArtifactsRepository:
                 new_lines.append(line)
                 continue
 
-            m = pattern.match(line)
+            m = REFORMAT_VERIFY_RE.match(line)
             if m:
                 item_header = m.group(1).rstrip()
                 verify_cmd = m.group(2).strip()
@@ -852,7 +911,7 @@ class ArtifactsRepository:
                 new_lines.append(line)
 
         if reformatted_count > 0:
-            path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+            atomic_write_text(path, "\n".join(new_lines) + "\n")
         return reformatted_count
 
     def cmd_reformat(self, targets: List[str]):
@@ -881,7 +940,7 @@ class ArtifactsRepository:
 
 def print_usage():
     print(
-        "Usage: artifacts.sh <status|unconverted-reqs|unconverted-decs|unconverted-specs|next-task|frontier|next-id <r|d|s|t>|decide <Rxx> <title> --alternatives ... --consequences ... [--context ...] [--verify ...]|tree [ID]|trace <ID>|sync|check|verify-links|reformat [targets...]>",
+        "Usage: iridescent-artifacts <status|unconverted-reqs|unconverted-decs|unconverted-specs|next-task|frontier|next-id <r|d|s|t>|decide <Rxx> <title> --alternatives ... --consequences ... [--arch <H2>] [--context ...] [--supersedes <Dyy>]|tree [ID]|trace <ID>|sync|check|verify-links|reformat [targets...]>",
         file=sys.stderr,
     )
     sys.exit(2)
@@ -907,21 +966,23 @@ def main():
     elif cmd == "frontier":
         repo.cmd_frontier()
     elif cmd == "decide":
-        parser = argparse.ArgumentParser(prog="artifacts.sh decide")
+        parser = argparse.ArgumentParser(prog="iridescent-artifacts decide")
         parser.add_argument("req")
         parser.add_argument("title")
+        parser.add_argument("--arch", default="System Shape")
         parser.add_argument("--context", default=None)
         parser.add_argument("--alternatives", required=True)
         parser.add_argument("--consequences", required=True)
-        parser.add_argument("--verify", default=None)
+        parser.add_argument("--supersedes", default=None)
         args = parser.parse_args(sys.argv[2:])
         repo.cmd_decide(
             args.req,
             args.title,
             args.alternatives,
             args.consequences,
-            args.verify,
+            args.arch,
             args.context,
+            args.supersedes,
         )
     elif cmd == "next-id":
         if len(sys.argv) < 3:

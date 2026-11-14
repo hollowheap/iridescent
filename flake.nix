@@ -19,7 +19,7 @@
 
       skillsRoot = ./skills;
       rulesFile = ./rules/artifacts.md;
-      artifactsScript = ./scripts/artifacts.sh;
+      artifactsScript = ./scripts/iridescent-artifacts;
 
       skillNames = builtins.attrNames (
         lib.filterAttrs (_: type: type == "directory") (builtins.readDir skillsRoot)
@@ -29,7 +29,7 @@
         pkgs:
         let
           artifactsApp = pkgs.writeShellApplication {
-            name = "artifacts.sh";
+            name = "iridescent-artifacts";
             runtimeInputs = [ pkgs.python3 ];
             text = ''
               exec python3 ${artifactsScript} "$@"
@@ -40,24 +40,14 @@
           name = "iridescent-artifacts";
           paths = [ artifactsApp ];
           postBuild = ''
-            ln -s $out/bin/artifacts.sh $out/bin/iridescent-artifacts
-            ln -s $out/bin/artifacts.sh $out/bin/artifacts
+            ln -s $out/bin/iridescent-artifacts $out/bin/artifacts
+            ln -s $out/bin/iridescent-artifacts $out/bin/artifacts.sh
           '';
         };
 
-      renderSkill =
-        invocation: content:
-        lib.foldl' (
-          text: name:
-          builtins.replaceStrings [ "{{skill:${name}}}" ] [ (invocation name) ] text
-        ) content skillNames;
-
       mkSkillDir =
         pkgs:
-        {
-          prefix,
-          invocation ? (name: name),
-        }:
+        { prefix }:
         name:
         let
           dir = skillsRoot + "/${name}";
@@ -71,33 +61,22 @@
             let
               rel = lib.removePrefix (toString dir + "/") (toString file);
               mode = if lib.hasPrefix "scripts/" rel then "0755" else "0644";
-              srcFile =
-                if lib.hasSuffix ".md" (toString file) then
-                  pkgs.writeText "${name}-${builtins.replaceStrings [ "/" ] [ "-" ] rel}" (
-                    renderSkill invocation (builtins.readFile file)
-                  )
-                else
-                  file;
             in
             ''
-              install -D -m${mode} ${srcFile} "$out/${rel}"
+              install -D -m${mode} ${file} "$out/${rel}"
             ''
           ) files}
-          install -D -m0755 ${helper}/bin/artifacts.sh "$out/scripts/artifacts.sh"
+          install -D -m0755 ${helper}/bin/iridescent-artifacts "$out/scripts/iridescent-artifacts"
         '';
 
       mkSkillDirs =
         pkgs:
-        {
-          prefix,
-          invocation ? (name: name),
-        }:
-        lib.genAttrs skillNames (mkSkillDir pkgs { inherit prefix invocation; });
+        { prefix }:
+        lib.genAttrs skillNames (mkSkillDir pkgs { inherit prefix; });
 
       mkSkillFileAttrs =
         {
           baseDir,
-          invocation ? (name: name),
           pkgs ? null,
         }:
         builtins.listToAttrs (
@@ -114,21 +93,17 @@
                   in
                   {
                     name = "${baseDir}/${name}/${rel}";
-                    value =
-                      if lib.hasSuffix ".md" (toString file) then
-                        { text = renderSkill invocation (builtins.readFile file); }
-                      else
-                        {
-                          source = file;
-                          executable = lib.hasPrefix "scripts/" rel;
-                        };
+                    value = {
+                      source = file;
+                      executable = lib.hasPrefix "scripts/" rel;
+                    };
                   }
                 ) files;
                 helperEntry = {
-                  name = "${baseDir}/${name}/scripts/artifacts.sh";
+                  name = "${baseDir}/${name}/scripts/iridescent-artifacts";
                   value =
                     if pkgs != null then
-                      { source = "${mkIridescentArtifacts pkgs}/bin/artifacts.sh"; }
+                      { source = "${mkIridescentArtifacts pkgs}/bin/iridescent-artifacts"; }
                     else
                       {
                         source = artifactsScript;
@@ -177,20 +152,14 @@
 
               (lib.optionalAttrs (hasOpt "opencode") {
                 programs.opencode = lib.mkIf (enabled "opencode") {
-                  skills = mkSkillDirs pkgs {
-                    prefix = "opencode";
-                    invocation = name: "@${name}";
-                  };
+                  skills = mkSkillDirs pkgs { prefix = "opencode"; };
                   context = lib.mkAfter ruleText;
                 };
               })
 
               (lib.optionalAttrs (hasOpt "codex") {
                 programs.codex = lib.mkIf (enabled "codex") {
-                  skills = mkSkillDirs pkgs {
-                    prefix = "codex";
-                    invocation = name: "$" + name;
-                  };
+                  skills = mkSkillDirs pkgs { prefix = "codex"; };
                   context = lib.mkAfter ruleText;
                 };
               })
@@ -210,10 +179,7 @@
 
               (lib.optionalAttrs (hasOpt "antigravity-cli") {
                 programs.antigravity-cli = lib.mkIf (enabled "antigravity-cli") {
-                  skills = mkSkillDirs pkgs {
-                    prefix = "antigravity";
-                    invocation = name: "/${name}";
-                  };
+                  skills = mkSkillDirs pkgs { prefix = "antigravity"; };
                   context = lib.mkAfter ruleText;
                 };
               })
@@ -234,7 +200,6 @@
                 home.file = lib.mkIf (enabled "pi-coding-agent") (
                   mkSkillFileAttrs {
                     baseDir = "${config.programs.pi-coding-agent.configDir}/skills";
-                    invocation = name: "/skill:${name}";
                     inherit pkgs;
                   }
                 );
@@ -253,7 +218,6 @@
           rulesFile
           artifactsScript
           mkIridescentArtifacts
-          renderSkill
           mkSkillDir
           mkSkillDirs
           mkSkillFileAttrs
