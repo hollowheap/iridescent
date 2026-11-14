@@ -16,4 +16,8 @@
 - Keep requirement, decision, spec, and task IDs immutable; never renumber existing IDs.
 - Keep `AGENTS.md` verified and scannable; keep `artifacts/context.md` under 60 lines.
 - Commands belong in `AGENTS.md` `## Essential Commands`; `artifacts/context.md` must not have a `## Commands` section.
+- Do not emit a `## Repository Layout` section in `AGENTS.md`; a session gets the layout from `ls`.
+- Put any long task-specific runbook, such as a multi-step Playwright or preview workflow, into a project skill at `.claude/skills/<name>/SKILL.md`; keep one line in `AGENTS.md` that points to it.
+- Keep every safety prohibition ("Never …") in `AGENTS.md`; never move one into a skill.
+- Do not write test pass counts into `AGENTS.md`; they become wrong after every change.
 - Verify: `scripts/artifacts.sh verify-links` outputs OK, architecture is current, no orphaned open decisions remain, and persistent review records reflect the changed slices.
