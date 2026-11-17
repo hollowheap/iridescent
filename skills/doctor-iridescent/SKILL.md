@@ -4,6 +4,11 @@ description: Diagnose and repair iridescent workspace layout, legacy `artifacts/
 disable-model-invocation: true
 ---
 
+## Scope
+
+- Covers: repairing workspace layout, migrating legacy `artifacts/` paths, and fixing artifact graph or link drift.
+- Excludes: RDST content reconciliation, design changes, and implementation.
+
 ## Workflow
 
 1. Inspect the workspace for `AGENTS.md`, `.artifacts/`, legacy `artifacts/`, stray root RDST records, and `scripts/iridescent-artifacts`.

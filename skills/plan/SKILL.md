@@ -4,6 +4,11 @@ description: Turn specs into atomic verified tasks.
 disable-model-invocation: true
 ---
 
+## Scope
+
+- Covers: converting accepted specs into atomic, verified tasks in `.artifacts/TASKS.md`.
+- Excludes: specs, design decisions, implementation, and review.
+
 ## Workflow
 
 1. Run `scripts/iridescent-artifacts unconverted-specs`; if NONE, run `unconverted-decs`.

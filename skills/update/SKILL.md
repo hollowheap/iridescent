@@ -4,6 +4,11 @@ description: Reconcile RDST artifacts with code and architecture.
 disable-model-invocation: true
 ---
 
+## Scope
+
+- Covers: reconciling `AGENTS.md` and `.artifacts/` records with workspace reality, code, and verification.
+- Excludes: design forks, new requirements, implementation, and review.
+
 ## Workflow
 
 1. Inspect workspace reality: `git status`, recent commits, manifests, build runners, and entrypoints.

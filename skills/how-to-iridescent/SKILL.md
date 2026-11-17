@@ -4,6 +4,11 @@ description: Explain the iridescent lifecycle loop and recommend the next skill 
 disable-model-invocation: true
 ---
 
+## Scope
+
+- Covers: read-only explanation of the lifecycle loop and routing to the next skill.
+- Excludes: workspace repair, artifact edits, and implementation.
+
 ## Workflow
 
 1. Inspect the workspace for `AGENTS.md`, `.artifacts/`, and `scripts/iridescent-artifacts`.

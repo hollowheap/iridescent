@@ -4,6 +4,11 @@ description: Bootstrap AGENTS, context, and architecture.
 disable-model-invocation: true
 ---
 
+## Scope
+
+- Covers: first-time workspace bootstrap of `AGENTS.md`, `.artifacts/CONTEXT.md`, and `.artifacts/ARCHITECTURE.md`.
+- Excludes: workspaces that already have `AGENTS.md`, design decisions, and feature implementation.
+
 ## Workflow
 
 1. Inspect workspace for `AGENTS.md` and `.artifacts/CONTEXT.md`. If `AGENTS.md` exists, stop immediately.

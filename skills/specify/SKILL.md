@@ -4,6 +4,11 @@ description: Turn accepted design into verified specs.
 disable-model-invocation: true
 ---
 
+## Scope
+
+- Covers: converting accepted decisions into public-boundary specs in `.artifacts/SPECS.md`.
+- Excludes: design decisions, task planning, implementation, and review.
+
 ## Workflow
 
 1. Run `scripts/iridescent-artifacts unconverted-decs`; if output is NONE, stop immediately.

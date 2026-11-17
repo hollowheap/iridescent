@@ -4,6 +4,11 @@ description: Explore archetypes and candidate questions.
 disable-model-invocation: true
 ---
 
+## Scope
+
+- Covers: problem framing, scope boundaries, primary-source research, and comparison of architectural or UX archetypes.
+- Excludes: accepted decisions, requirements, specs, task breakdown, and implementation.
+
 ## Workflow
 
 1. Frame the destination: what changes for the user when this is done? Record it under `## Destination`.

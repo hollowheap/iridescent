@@ -4,6 +4,11 @@ description: Worker implements the next task test-first.
 disable-model-invocation: true
 ---
 
+## Scope
+
+- Covers: implementing the next unblocked task and small reversible quick changes with verified tests.
+- Excludes: design decisions, specs, planning, review verdicts, and unrelated refactors.
+
 ## Workflow
 
 1. Run `scripts/iridescent-artifacts next-task`; if NONE, stop immediately.

@@ -4,6 +4,11 @@ description: Define outcomes, decisions, and architecture.
 disable-model-invocation: true
 ---
 
+## Scope
+
+- Covers: observable requirements, accepted decisions, and architecture for accepted design changes.
+- Excludes: unresolved design forks, specs, task breakdown, and implementation.
+
 ## Workflow
 
 1. Run `scripts/iridescent-artifacts status`; read `.artifacts/REQUIREMENTS.md`, `.artifacts/ARCHITECTURE.md`, and `.artifacts/BRAINSTORM.md` when present.

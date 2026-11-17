@@ -4,6 +4,11 @@ description: Review diffs, slices, seams, and robustness.
 disable-model-invocation: true
 ---
 
+## Scope
+
+- Covers: diff, slice, seam, and robustness reviews with a lens ledger, findings, and verification.
+- Excludes: requirements, design, specification, planning, and feature implementation.
+
 ## Workflow
 
 1. Use `references/diff.md` by default; load `references/profiles.md` only when choosing `slice`, `seam`, or `robust`, or recording a persistent `Vxx`.
