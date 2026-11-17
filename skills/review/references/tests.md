@@ -12,6 +12,8 @@ Automated tests, verification checks, fixtures, and test doubles.
 ## Checks
 
 - Assert observable behavior at the public seam rather than mirroring private implementation steps or config literals.
+- Every `Sxx` ledger case has a test, and every `Txx` case ID resolves.
+- Shared seams have provider-side and consumer-side cases plus one cross-seam path.
 - Bugfixes and behavioral invariants include a check that fails before the fix and passes after.
 - Exercise boundary failure paths and edge conditions (empty, invalid, concurrent, error), not only the happy path.
 - Keep mocks/stubs honest so they do not mask real schema, serialization, or contract mismatches.
@@ -23,4 +25,4 @@ Automated tests, verification checks, fixtures, and test doubles.
 
 ## Verify
 
-Target tests and task verification pass cleanly without skipped assertions or relaxed checks.
+All ledger cases are referenced, tests and task verification pass, and no assertion is relaxed.

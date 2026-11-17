@@ -8,6 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CLI_PATH = REPO_ROOT / "scripts" / "iridescent-artifacts"
 SCRIPTED_SKILLS = (
     "design",
+    "draw",
     "doctor-iridescent",
     "how-to-iridescent",
     "implement",
@@ -44,6 +45,21 @@ class IridescentArtifactsTests(unittest.TestCase):
             cwd=cwd or self.workspace,
             text=True,
             capture_output=True,
+        )
+
+    def write_ledger(self, spec_id: str, *case_ids: str) -> None:
+        ledger_dir = self.artifacts / "tests"
+        ledger_dir.mkdir(exist_ok=True)
+        lines = [f"# Test Ledger: {spec_id}", ""]
+        for case_id in case_ids:
+            lines.extend([f"### {case_id}: Case {case_id}", "- Red: true", ""])
+        (ledger_dir / f"{spec_id}.md").write_text("\n".join(lines), encoding="utf-8")
+
+    def write_task_detail(self, task_id: str) -> None:
+        detail_dir = self.artifacts / "tasks"
+        detail_dir.mkdir(exist_ok=True)
+        (detail_dir / f"{task_id}.md").write_text(
+            f"# Task Detail: {task_id}\n", encoding="utf-8"
         )
 
     def test_status_and_verify_links_on_empty_graph(self):
@@ -144,17 +160,25 @@ class IridescentArtifactsTests(unittest.TestCase):
         (self.artifacts / "SPECS.md").write_text(
             "# Specs\n\n### Slice\n\n#### System Shape\n\n"
             "- [ ] S01 [R01, D01]: Handle request cleanly\n"
-            "  - Verify: echo spec\n",
+            "  - Verify: echo spec\n"
+            "  - Ledger: tests/S01.md\n",
             encoding="utf-8",
         )
         (self.artifacts / "TASKS.md").write_text(
             "# Tasks\n\n### Slice\n\n"
             "- [x] T01 [S01]: First task\n"
             "  - Verify: echo t1\n"
+            "  - Detail: tasks/T01.md\n"
+            "  - Cases: C01\n"
             "- [ ] T02 [S01] [T01]: Dependent task\n"
-            "  - Verify: echo t2\n",
+            "  - Verify: echo t2\n"
+            "  - Detail: tasks/T02.md\n"
+            "  - Cases: C02\n",
             encoding="utf-8",
         )
+        self.write_ledger("S01", "C01", "C02")
+        self.write_task_detail("T01")
+        self.write_task_detail("T02")
 
         frontier = self.run_cli("frontier")
         self.assertEqual(frontier.returncode, 0, frontier.stderr)
@@ -217,6 +241,85 @@ class IridescentArtifactsTests(unittest.TestCase):
         out = md.read_text(encoding="utf-8")
         self.assertIn("- [ ] T99 [S01]: Inside fence | Verify: keep inline", out)
         self.assertIn("- [ ] T01 [S01]: Outside fence\n  - Verify: echo ok", out)
+
+    def test_undrawn_specs_lists_specs_without_ledgers(self):
+        (self.artifacts / "SPECS.md").write_text(
+            "# Specs\n\n### Slice\n\n#### System Shape\n\n"
+            "- [ ] S01 [R01, D01]: Handle request cleanly\n"
+            "  - Verify: echo spec\n",
+            encoding="utf-8",
+        )
+
+        undrawn = self.run_cli("undrawn-specs")
+        self.assertEqual(undrawn.returncode, 0, undrawn.stderr)
+        self.assertIn("S01", undrawn.stdout)
+
+        self.write_ledger("S01", "C01")
+        specs = self.artifacts / "SPECS.md"
+        specs.write_text(
+            specs.read_text(encoding="utf-8").replace(
+                "  - Verify: echo spec\n",
+                "  - Verify: echo spec\n  - Ledger: tests/S01.md\n",
+            ),
+            encoding="utf-8",
+        )
+
+        undrawn = self.run_cli("undrawn-specs")
+        self.assertEqual(undrawn.returncode, 0, undrawn.stderr)
+        self.assertEqual(undrawn.stdout.strip(), "NONE")
+
+    def test_verify_links_validates_ledgers_case_refs_and_task_details(self):
+        (self.artifacts / "REQUIREMENTS.md").write_text(
+            "# Requirements\n\n### Slice\n\n"
+            "- [ ] R01: Deliver slice\n  - Verify: echo req\n",
+            encoding="utf-8",
+        )
+        (self.artifacts / "DECISIONS.md").write_text(
+            "# Decisions\n\n### System Shape\n\n"
+            "- [ ] D01 [R01]: Single process\n",
+            encoding="utf-8",
+        )
+        (self.artifacts / "SPECS.md").write_text(
+            "# Specs\n\n### Slice\n\n#### System Shape\n\n"
+            "- [ ] S01 [R01, D01]: Handle request cleanly\n"
+            "  - Verify: echo spec\n"
+            "  - Ledger: tests/S01.md\n",
+            encoding="utf-8",
+        )
+        (self.artifacts / "TASKS.md").write_text(
+            "# Tasks\n\n### Slice\n\n"
+            "- [ ] T01 [S01]: Draw cases green\n"
+            "  - Verify: echo task\n"
+            "  - Detail: tasks/T01.md\n"
+            "  - Cases: C01, C02\n",
+            encoding="utf-8",
+        )
+        self.write_ledger("S01", "C01", "C02")
+        self.write_task_detail("T01")
+
+        verify = self.run_cli("verify-links")
+        self.assertEqual(verify.returncode, 0, verify.stderr)
+        self.assertEqual(verify.stdout.strip(), "OK")
+
+        self.write_ledger("S01", "C01", "C02", "C03")
+        verify = self.run_cli("verify-links")
+        self.assertNotEqual(verify.returncode, 0)
+        self.assertIn("Unreferenced case: C03", verify.stderr)
+
+        self.write_ledger("S01", "C01", "C02")
+        tasks = self.artifacts / "TASKS.md"
+        tasks.write_text(
+            tasks.read_text(encoding="utf-8").replace("C02", "C99"),
+            encoding="utf-8",
+        )
+        verify = self.run_cli("verify-links")
+        self.assertNotEqual(verify.returncode, 0)
+        self.assertIn("Unknown case: C99", verify.stderr)
+
+        (self.artifacts / "tasks" / "T01.md").unlink()
+        verify = self.run_cli("verify-links")
+        self.assertNotEqual(verify.returncode, 0)
+        self.assertIn("Missing Task Detail file", verify.stderr)
 
     def test_skill_wrappers_exist_for_all_scripted_skills_and_omit_curl_fallback(self):
         for skill in SCRIPTED_SKILLS:

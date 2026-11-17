@@ -7,3 +7,4 @@
 - Pipe noisy command output through `head`, `tail`, or `rg`; redirect large output, logs, or search dumps to `.artifacts/logs/` or `.artifacts/errors/` and return strictly the path with a targeted `rg` or `tail` command (never the full dump).
 - Working notes live in `.artifacts/notes/`, primary-source research in `.artifacts/research/<topic>.md`, and persistent reviews in `.artifacts/review/<slice>.md` (indexed by `.artifacts/REVIEWS.md`).
 - Workspace and RDST records live at `.artifacts/` root: `CONTEXT.md`, `ARCHITECTURE.md`, `BRAINSTORM.md`, `REQUIREMENTS.md`, `DECISIONS.md`, `SPECS.md`, `TASKS.md`, and `REVIEWS.md`.
+- Per-spec test ledgers live in `.artifacts/tests/<Sxx>.md`; per-task details live in `.artifacts/tasks/<Txx>.md`, linked from root records.

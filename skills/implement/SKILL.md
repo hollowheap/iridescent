@@ -13,7 +13,7 @@ disable-model-invocation: true
 
 1. Run `scripts/iridescent-artifacts next-task`; if NONE, stop immediately.
 2. Read only the task, parent spec, decision, and cited architecture section. If a missing contract or unresolved design fork blocks the task, stop and route back to the `specify` or `design` skill.
-3. For non-trivial changes, load `references/principles.md` and write the smallest failing seam check via `references/tdd.md`, confirming red; skip `references/tdd.md` for trivial one-liners.
+3. For non-trivial changes, load `references/principles.md`, run the assigned ledger cases via `references/tdd.md`, and confirm red before production edits; skip `references/tdd.md` for trivial one-liners.
 4. Implement the minimum production code required to satisfy the invariant using targeted hunk edits.
 5. Rerun the same check until green, then run the task verify and broader suite; hand the final review to the `review` skill.
 6. Apply minimal review fixes; mark the task complete only after the test/verify and final review are accepted.

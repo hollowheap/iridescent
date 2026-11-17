@@ -31,6 +31,10 @@ VERIFY_INLINE_RE = re.compile(r"(?:\||^-)[ \t]*Verify:[ \t]*(.+)$", re.IGNORECAS
 VERIFY_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Verify:[ \t]*(.+)$", re.IGNORECASE)
 ARCH_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*(?:Arch|Architecture):[ \t]*(.+)$", re.IGNORECASE)
 REFORMAT_VERIFY_RE = re.compile(r"^(\s*-\s*\[[ xX]\].*?)\s*\|\s*Verify:\s*(.*)$")
+LEDGER_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Ledger:[ \t]*(.+)$", re.IGNORECASE)
+DETAIL_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Detail:[ \t]*(.+)$", re.IGNORECASE)
+CASES_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Cases:[ \t]*(.+)$", re.IGNORECASE)
+CASE_HEADER_RE = re.compile(r"^###[ \t]+(C\d+)\b")
 
 
 def atomic_write_text(path: Path, content: str) -> None:
@@ -128,6 +132,25 @@ class ArtifactsRepository:
         self.tasks: List[Node] = []
         self.task_file = "TASKS.md" if (self.root / "TASKS.md").is_file() or not (self.root / "PLAN.md").is_file() else "PLAN.md"
         self.parse_all()
+
+    @staticmethod
+    def detail_value(node: Node, pattern: re.Pattern) -> Optional[str]:
+        for line in node.details:
+            match = pattern.search(line)
+            if match:
+                return match.group(1).strip().strip("`")
+        return None
+
+    @staticmethod
+    def ledger_cases(path: Path) -> Set[str]:
+        cases: Set[str] = set()
+        if not path.is_file():
+            return cases
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = CASE_HEADER_RE.match(line)
+            if match:
+                cases.add(match.group(1))
+        return cases
 
     def parse_file(self, file_name: str, kind: str) -> List[Node]:
         path = self.root / file_name
@@ -326,6 +349,21 @@ class ArtifactsRepository:
         else:
             for s in unconverted:
                 print(s.raw_header)
+
+    def cmd_undrawn_specs(self):
+        undrawn = []
+        for spec in self.specs:
+            expected = (Path("tests") / f"{spec.id}.md").as_posix()
+            linked = self.detail_value(spec, LEDGER_DETAIL_RE)
+            if linked != expected or not (self.root / expected).is_file():
+                undrawn.append(spec)
+        if not undrawn:
+            print("NONE")
+            return
+        for spec in undrawn:
+            parents = ", ".join(spec.parent_ids)
+            suffix = f" [{parents}]" if parents else ""
+            print(f"{spec.id}{suffix}: {spec.title}")
 
     def cmd_frontier(self):
         done_ids = {t.id for t in self.tasks if t.checked}
@@ -692,6 +730,98 @@ class ArtifactsRepository:
                 )
                 errors += 1
 
+        spec_by_id = {s.id: s for s in self.specs}
+        case_sets: Dict[str, Set[str]] = {}
+
+        for spec in self.specs:
+            expected = (Path("tests") / f"{spec.id}.md").as_posix()
+            linked = self.detail_value(spec, LEDGER_DETAIL_RE)
+            if linked is None:
+                print(
+                    f"Missing Ledger: {spec.id} ({spec.file_path.name}:{spec.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+                continue
+            if linked != expected:
+                print(
+                    f"Invalid Ledger path: {spec.id} must be {expected} "
+                    f"({spec.file_path.name}:{spec.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+                continue
+            ledger = self.root / expected
+            if not ledger.is_file():
+                print(f"Missing Ledger file: {expected} for {spec.id}", file=sys.stderr)
+                errors += 1
+                continue
+            cases = self.ledger_cases(ledger)
+            if not cases:
+                print(f"Missing cases: {expected} for {spec.id}", file=sys.stderr)
+                errors += 1
+            case_sets[spec.id] = cases
+
+        referenced: Dict[str, Set[str]] = {sid: set() for sid in case_sets}
+        for task in self.tasks:
+            expected = (Path("tasks") / f"{task.id}.md").as_posix()
+            linked = self.detail_value(task, DETAIL_DETAIL_RE)
+            if linked is None:
+                print(
+                    f"Missing Detail: {task.id} ({task.file_path.name}:{task.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+            elif linked != expected:
+                print(
+                    f"Invalid Detail path: {task.id} must be {expected} "
+                    f"({task.file_path.name}:{task.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+            elif not (self.root / expected).is_file():
+                print(f"Missing Task Detail file: {expected} for {task.id}", file=sys.stderr)
+                errors += 1
+
+            cases_raw = self.detail_value(task, CASES_DETAIL_RE)
+            if not cases_raw:
+                print(
+                    f"Missing Cases: {task.id} ({task.file_path.name}:{task.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+                continue
+            case_ids = [c.strip() for c in re.split(r"[,\s]+", cases_raw) if c.strip()]
+            spec_ids = [pid for pid in task.parent_ids if pid in spec_by_id]
+            if not spec_ids:
+                print(
+                    f"Missing Spec parent for cases: {task.id} "
+                    f"({task.file_path.name}:{task.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+                continue
+            available: Set[str] = set()
+            for spec_id in spec_ids:
+                available.update(case_sets.get(spec_id, set()))
+            for case_id in case_ids:
+                if case_id not in available:
+                    print(
+                        f"Unknown case: {case_id} for {task.id} "
+                        f"({task.file_path.name}:{task.line_number})",
+                        file=sys.stderr,
+                    )
+                    errors += 1
+                    continue
+                for spec_id in spec_ids:
+                    if case_id in case_sets.get(spec_id, set()):
+                        referenced[spec_id].add(case_id)
+
+        for spec_id, cases in case_sets.items():
+            for case_id in sorted(cases - referenced.get(spec_id, set())):
+                print(f"Unreferenced case: {case_id} for {spec_id}", file=sys.stderr)
+                errors += 1
+
         missing_arch_specs = [s for s in self.specs if not s.arch_section]
         if missing_arch_specs:
             print(
@@ -940,7 +1070,7 @@ class ArtifactsRepository:
 
 def print_usage():
     print(
-        "Usage: iridescent-artifacts <status|unconverted-reqs|unconverted-decs|unconverted-specs|next-task|frontier|next-id <r|d|s|t>|decide <Rxx> <title> --alternatives ... --consequences ... [--arch <H2>] [--context ...] [--supersedes <Dyy>]|tree [ID]|trace <ID>|sync|check|verify-links|reformat [targets...]>",
+        "Usage: iridescent-artifacts <status|unconverted-reqs|unconverted-decs|unconverted-specs|undrawn-specs|next-task|frontier|next-id <r|d|s|t>|decide <Rxx> <title> --alternatives ... --consequences ... [--arch <H2>] [--context ...] [--supersedes <Dyy>]|tree [ID]|trace <ID>|sync|check|verify-links|reformat [targets...]>",
         file=sys.stderr,
     )
     sys.exit(2)
@@ -961,6 +1091,8 @@ def main():
         repo.cmd_unconverted_decs()
     elif cmd == "unconverted-specs":
         repo.cmd_unconverted_specs()
+    elif cmd == "undrawn-specs":
+        repo.cmd_undrawn_specs()
     elif cmd == "next-task":
         repo.cmd_next_task()
     elif cmd == "frontier":

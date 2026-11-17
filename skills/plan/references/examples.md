@@ -13,5 +13,9 @@
   - Files: `home/modules/environment/desktop.nix`
   - Notes: Expose boolean option defaulting to true under desktop namespace.
   - Risk: Ensure backwards compatibility when desktop options are unimported.
+  - Detail: tasks/T01.md
+  - Cases: C01, C02
 - [ ] T02 [S01] [T01]: Wire tray behavior to the desktop module
   - Verify: `nix eval .#homeConfigurations.hollowheap.config.desktop.tray`
+  - Detail: tasks/T02.md
+  - Cases: C03

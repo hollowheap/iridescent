@@ -32,10 +32,27 @@ When cleaning up on explicit request:
 3. Delete or inline one seam at a time without adding new helpers, ports, or
    config.
 4. Re-run verify after each removal; revert any change that alters behavior.
+5. Name the structural remedy: delete or inline the seam, collapse duplicate
+   branches, replace condition chains with a model or dispatcher, move feature
+   logic to its owner, or reuse the canonical helper.
+
+## Enforcement Ladder
+
+When a mistake repeats, fix it at the highest effective level:
+
+1. Architecture: remove the wrong path or give each piece of state one owner.
+2. Types: make the bad state unrepresentable.
+3. Lint or CI: fail with an error that names the correct replacement.
+4. Tests: prove the behavior and fail when the behavior breaks.
+5. Docs or agent rules: use only for judgment calls, and name the enforcement.
+
+Prove each new guard fails on a real past mistake.
 
 ## Evidence
 
 - Cite `file:line`, call-site/adapter count, or the deletion-test result.
+- For high-impact claims, invert one condition, rerun the task verify, restore
+  the file, and report any test that stayed green.
 
 ## Verify
 
