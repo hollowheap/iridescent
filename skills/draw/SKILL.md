@@ -22,6 +22,7 @@ disable-model-invocation: true
 
 - Process one `Sxx` at a time.
 - Assert observable behavior only; never mirror internal steps.
+- Require one case focused on one observable behavior and a Red command per case.
 - Require at least one case for every recorded failure and both sides of a shared seam.
 - Keep every test red for the expected reason; never weaken assertions or skip tests.
 - Never edit production source, specs beyond the ledger link, or task records.

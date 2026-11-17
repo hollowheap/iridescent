@@ -8,3 +8,6 @@
 - Working notes live in `.artifacts/notes/`, primary-source research in `.artifacts/research/<topic>.md`, and persistent reviews in `.artifacts/review/<slice>.md` (indexed by `.artifacts/REVIEWS.md`).
 - Workspace and RDST records live at `.artifacts/` root: `CONTEXT.md`, `ARCHITECTURE.md`, `BRAINSTORM.md`, `REQUIREMENTS.md`, `DECISIONS.md`, `SPECS.md`, `TASKS.md`, and `REVIEWS.md`.
 - Per-spec test ledgers live in `.artifacts/tests/<Sxx>.md`; per-task details live in `.artifacts/tasks/<Txx>.md`, linked from root records.
+- Root records are authoritative; detail files are linked evidence.
+- Detail fields are contract and must keep exact names and order.
+- Run `verify-links` before continuing workspace changes.

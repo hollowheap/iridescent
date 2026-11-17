@@ -13,7 +13,7 @@ disable-model-invocation: true
 
 1. Run `scripts/iridescent-artifacts unconverted-decs`; if output is NONE, stop immediately.
 2. Derive `Sxx` from accepted `Rxx`, `Dxx`, and the architecture view. If a parent or architecture section is missing, stop.
-3. Probe ambiguous seams with the host's structured question tool, giving 2-4 options, a recommendation, and answer consequences; block until answered, and return to the `design` skill to record `Dxx` before writing `Sxx` if an answer changes design or architecture.
+3. Probe ambiguous seams with the host's structured question tool; never ask unresolved questions as plain chat text; give 2-4 concrete options, one recommended answer, and a one-line consequence per answer; block until answered, and return to the `design` skill to record `Dxx` before writing `Sxx` if an answer changes design or architecture.
 4. Run `scripts/iridescent-artifacts next-id s` to obtain sequential `Sxx` IDs.
 5. Append public boundary invariants to `.artifacts/SPECS.md` under the vertical-slice H3 heading and the `#### <Arch>` H4 group with `Seam`, `Behavior`, `Failures`, and `Verify` fields (see `references/examples.md` only if the format is unfamiliar); cite the accepted decision and architecture section.
 6. Run `scripts/iridescent-artifacts check` to verify trace links and graph shape.

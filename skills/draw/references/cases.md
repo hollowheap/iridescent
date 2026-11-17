@@ -26,4 +26,4 @@
 - Use a unique `Cxx` ID per case.
 - Assert the public boundary, never internal calls or private state.
 - Record the red command before writing any production code.
-- Keep one case focused on one observable behavior.
+- Keep one case focused on one observable behavior per Red command.

@@ -13,7 +13,7 @@ disable-model-invocation: true
 
 1. Run `scripts/iridescent-artifacts status`; read `.artifacts/REQUIREMENTS.md`, `.artifacts/ARCHITECTURE.md`, and `.artifacts/BRAINSTORM.md` when present.
 2. Convert observable outcomes into requirements using `references/requirements.md`, grouped by canonical vertical-slice H3 headings; reject any requirement that names a framework, module, file, or API.
-3. Grill architectural and design forks (system shape, vertical slices, module seams, stack choices, data contracts, and operations/security) with the host's structured question tool; ask only independent forks in one call with 2-4 options, a recommendation, and answer consequences, block before writing `Dxx` if any choice remains unanswered.
+3. Grill architectural and design forks (system shape, vertical slices, module seams, stack choices, data contracts, and operations/security) with the host's structured question tool; never ask unresolved questions as plain chat text; ask only independent forks in one call with 2-4 concrete options, one recommended answer, and a one-line consequence per answer; block before writing `Dxx` if any choice remains unanswered.
 4. Record strictly accepted decisions with `references/decision.md` under the exact architecture H2 heading; omit `Arch:` and `Verify:` fields because the H3 and child specs carry them.
 5. Update `.artifacts/ARCHITECTURE.md` with `references/architecture.md` for accepted design changes; record vertical slice ownership, inward seams, and composition roots.
 6. Stop at accepted design and architecture; never record unresolved open decisions.

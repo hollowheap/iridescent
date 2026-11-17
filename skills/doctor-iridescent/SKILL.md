@@ -14,7 +14,7 @@ disable-model-invocation: true
 1. Inspect the workspace for `AGENTS.md`, `.artifacts/`, legacy `artifacts/`, stray root RDST records, and `scripts/iridescent-artifacts`.
 2. If `AGENTS.md` is missing, stop and instruct the user to run the `init` skill.
 3. Run the structural and version-migration checks in `references/checks.md`, including `scripts/iridescent-artifacts check` and `scripts/iridescent-artifacts verify-links` when available.
-4. Repair layout drift, migrate legacy `artifacts/` or misplaced RDST records to `.artifacts/<RECORD>.md`, ensure `.gitignore` ignores `.artifacts/`, and update stale path references in `.artifacts/*.md`.
+4. Repair layout drift, migrate legacy `artifacts/` or misplaced RDST records to `.artifacts/<RECORD>.md`, ensure `.gitignore` ignores `.artifacts/`, validate linked detail files, and update stale path references in `.artifacts/*.md`.
 5. Re-run `scripts/iridescent-artifacts check` and `scripts/iridescent-artifacts verify-links` when present, then report repaired items and any gaps requiring the `update` skill.
 
 ## Rules

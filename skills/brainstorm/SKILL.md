@@ -25,6 +25,6 @@ disable-model-invocation: true
 - Design research lives in `.artifacts/research/`; audit evidence lives in `.artifacts/review/`.
 - Explore structural trade-offs only and compare at least 2 contrasting alternatives with explicit failure modes; never commit to implementation.
 - Stay read-only on production source files and git state (never edit them); write disposable test probes strictly to `.artifacts/scripts/`.
-- Find facts in the repository, tools, and primary sources; ask the user only for decisions, constraints, and preferences through the host's structured question tool.
+- Find facts in the repository, tools, and primary sources; ask the user only for decisions, constraints, and preferences through the host's structured question tool, and never ask unresolved questions as plain chat text.
 - Require 2-4 concrete options, one recommended answer, and a one-line consequence per answer; batch only independent frontier questions.
 - Verify: `.artifacts/BRAINSTORM.md` has Destination, References, Archetypes, Trade-offs, Recommendation, Out of scope, and explicit approval.
