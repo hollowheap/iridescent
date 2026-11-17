@@ -24,4 +24,4 @@ disable-model-invocation: true
 - Use `git mv` for tracked files and `mv` for untracked files when migrating `artifacts/` into `.artifacts/`.
 - Keep both `AGENTS.md` and `.artifacts/CONTEXT.md` under 60 lines.
 - Never invent `scripts/iridescent-artifacts` if the host harness or project omits it; report its absence explicitly.
-- Verify: RDST records live at `.artifacts/{CONTEXT,ARCHITECTURE,BRAINSTORM,REQUIREMENTS,DECISIONS,SPECS,TASKS,REVIEWS}.md`, `.gitignore` ignores `.artifacts/`, `AGENTS.md` and `.artifacts/CONTEXT.md` are under 60 lines, and `scripts/iridescent-artifacts check` and `verify-links` output `OK` when available.
+- Verify: RDST records live at `.artifacts/{CONTEXT,ARCHITECTURE,BRAINSTORM,REQUIREMENTS,DECISIONS,SPECS,TASKS,REVIEWS}.md`, test ledgers live under `.artifacts/tests/`, task details live under `.artifacts/tasks/`, `.gitignore` ignores `.artifacts/`, `AGENTS.md` and `.artifacts/CONTEXT.md` are under 60 lines, and `scripts/iridescent-artifacts check` and `verify-links` output `OK` when available.
