@@ -52,7 +52,9 @@ class IridescentArtifactsTests(unittest.TestCase):
         ledger_dir.mkdir(exist_ok=True)
         lines = [f"# Test Ledger: {spec_id}", ""]
         for case_id in case_ids:
-            lines.extend([f"### {case_id}: Case {case_id}", "- Red: true", ""])
+            lines.extend(
+                [f"### {case_id}: Case {case_id}", "- Seam: test", "- Red: true", ""]
+            )
         (ledger_dir / f"{spec_id}.md").write_text("\n".join(lines), encoding="utf-8")
 
     def write_task_detail(self, task_id: str) -> None:
@@ -243,6 +245,16 @@ class IridescentArtifactsTests(unittest.TestCase):
         self.assertIn("- [ ] T01 [S01]: Outside fence\n  - Verify: echo ok", out)
 
     def test_undrawn_specs_lists_specs_without_ledgers(self):
+        (self.artifacts / "REQUIREMENTS.md").write_text(
+            "# Requirements\n\n### Slice\n\n"
+            "- [ ] R01: Deliver slice\n  - Verify: echo req\n",
+            encoding="utf-8",
+        )
+        (self.artifacts / "DECISIONS.md").write_text(
+            "# Decisions\n\n### System Shape\n\n"
+            "- [ ] D01 [R01]: Single process\n",
+            encoding="utf-8",
+        )
         (self.artifacts / "SPECS.md").write_text(
             "# Specs\n\n### Slice\n\n#### System Shape\n\n"
             "- [ ] S01 [R01, D01]: Handle request cleanly\n"
@@ -253,6 +265,10 @@ class IridescentArtifactsTests(unittest.TestCase):
         undrawn = self.run_cli("undrawn-specs")
         self.assertEqual(undrawn.returncode, 0, undrawn.stderr)
         self.assertIn("S01", undrawn.stdout)
+
+        verify = self.run_cli("verify-links")
+        self.assertEqual(verify.returncode, 0, verify.stderr)
+        self.assertIn("Missing Ledger", verify.stderr)
 
         self.write_ledger("S01", "C01")
         specs = self.artifacts / "SPECS.md"
@@ -267,6 +283,9 @@ class IridescentArtifactsTests(unittest.TestCase):
         undrawn = self.run_cli("undrawn-specs")
         self.assertEqual(undrawn.returncode, 0, undrawn.stderr)
         self.assertEqual(undrawn.stdout.strip(), "NONE")
+
+        verify = self.run_cli("verify-links")
+        self.assertEqual(verify.returncode, 0, verify.stderr)
 
     def test_verify_links_validates_ledgers_case_refs_and_task_details(self):
         (self.artifacts / "REQUIREMENTS.md").write_text(
