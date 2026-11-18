@@ -11,3 +11,10 @@
 - Root records are authoritative; detail files are linked evidence.
 - Detail fields are contract and must keep exact names and order.
 - Run `verify-links` before continuing workspace changes.
+- Follow `references/slicing.md` for slice boundaries, cardinality, coupling, and target-state requests.
+
+- Superseded `Rxx` and `Sxx` stay in live root records; the replacement record points to them with `Supersedes:`.
+- Agents skip superseded entries during normal work.
+- Active records use `Supersedes: <old-id>`.
+- Coverage-restoration cases use `Covers: Sxx/Cxx`.
+- Active records never reference superseded IDs as parents.

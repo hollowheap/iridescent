@@ -29,10 +29,6 @@ scripts/iridescent-artifacts next-task | frontier
 scripts/iridescent-artifacts check | verify-links | sync | tree [ID] | trace <ID>
 ```
 
-## Rules
-
-- `rules/artifacts.md` — always-on `.artifacts/` placement, `.gitignore` hygiene, RDST locality, and noisy-output redirection rule.
-
 ## Install
 
 ### `npx skills` (`vercel-labs/skills`)
@@ -41,10 +37,10 @@ scripts/iridescent-artifacts check | verify-links | sync | tree [ID] | trace <ID
 npx skills add hollowheap/iridescent
 ```
 
-Each `skills/<name>/` directory is self-contained (no cross-skill `../` paths) and bundles `scripts/iridescent-artifacts` where needed. Because `npx skills add` installs `skills/` only, copy or append `rules/artifacts.md` into your harness rule/instruction file (for example `.claude/rules/artifacts.md`, `.kiro/steering/artifacts.md`, or `AGENTS.md`).
+Each `skills/<name>/` directory is self-contained (no cross-skill `../` paths) and bundles `scripts/iridescent-artifacts` where needed. Artifact placement and slicing rules live in the relevant skill reference files.
 
 ### Nix Flake & Home Manager (`flake.nix`)
 
-- `homeManagerModules.default` (`programs.iridescent.enable = true`): installs `iridescent-artifacts` into `home.packages`, installs `skills/` (with `scripts/iridescent-artifacts` wired to Nix `python3`), and installs `rules/artifacts.md` into enabled harnesses (`claude-code`, `opencode`, `codex`, `crush`, `github-copilot-cli`, `antigravity-cli`, `kiro-cli`, `pi-coding-agent`).
+- `homeManagerModules.default` (`programs.iridescent.enable = true`): installs `iridescent-artifacts` into `home.packages` and installs `skills/` into enabled harnesses (`claude-code`, `opencode`, `codex`, `crush`, `github-copilot-cli`, `antigravity-cli`, `kiro-cli`, `pi-coding-agent`).
 - `packages.<system>.iridescent-artifacts` (and `default`): standalone `iridescent-artifacts` CLI derivation (with `artifacts` and `artifacts.sh` aliases).
 - `overlays.default`: overlays `pkgs.iridescent-artifacts`.

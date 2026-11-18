@@ -1,6 +1,6 @@
 # iridescent
 
-Declarative Markdown skill suite (`skills/`), Python 3 RDST trace CLI (`scripts/iridescent-artifacts`), workspace artifact rule (`rules/artifacts.md`), and Nix flake (`flake.nix`).
+Declarative Markdown skill suite (`skills/`), Python 3 RDST trace CLI (`scripts/iridescent-artifacts`), and Nix flake (`flake.nix`).
 
 ## Essential Commands
 

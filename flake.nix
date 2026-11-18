@@ -18,7 +18,6 @@
       forAllSystems = lib.genAttrs systems;
 
       skillsRoot = ./skills;
-      rulesFile = ./rules/artifacts.md;
       artifactsScript = ./scripts/iridescent-artifacts;
 
       skillNames = builtins.attrNames (
@@ -126,7 +125,6 @@
         }:
         let
           cfg = config.programs.iridescent;
-          ruleText = builtins.readFile rulesFile;
           hasOpt = name: options.programs ? ${name};
           enabled = name: hasOpt name && (config.programs.${name}.enable or false);
         in
@@ -134,7 +132,7 @@
           options.programs.iridescent.enable = lib.mkOption {
             type = lib.types.bool;
             default = true;
-            description = "Install iridescent skills, iridescent-artifacts, and workspace artifact rules into enabled AI harnesses.";
+            description = "Install iridescent skills and iridescent-artifacts into enabled AI harnesses.";
           };
 
           config = lib.mkIf cfg.enable (
@@ -146,21 +144,18 @@
               (lib.optionalAttrs (hasOpt "claude-code") {
                 programs.claude-code = lib.mkIf (enabled "claude-code") {
                   skills = mkSkillDirs pkgs { prefix = "claude-code"; };
-                  rules.artifacts = rulesFile;
                 };
               })
 
               (lib.optionalAttrs (hasOpt "opencode") {
                 programs.opencode = lib.mkIf (enabled "opencode") {
                   skills = mkSkillDirs pkgs { prefix = "opencode"; };
-                  context = lib.mkAfter ruleText;
                 };
               })
 
               (lib.optionalAttrs (hasOpt "codex") {
                 programs.codex = lib.mkIf (enabled "codex") {
                   skills = mkSkillDirs pkgs { prefix = "codex"; };
-                  context = lib.mkAfter ruleText;
                 };
               })
 
@@ -173,25 +168,20 @@
               (lib.optionalAttrs (hasOpt "github-copilot-cli") {
                 programs.github-copilot-cli = lib.mkIf (enabled "github-copilot-cli") {
                   skills = mkSkillDirs pkgs { prefix = "copilot"; };
-                  context = lib.mkAfter ruleText;
                 };
               })
 
               (lib.optionalAttrs (hasOpt "antigravity-cli") {
                 programs.antigravity-cli = lib.mkIf (enabled "antigravity-cli") {
                   skills = mkSkillDirs pkgs { prefix = "antigravity"; };
-                  context = lib.mkAfter ruleText;
                 };
               })
 
               (lib.optionalAttrs (hasOpt "kiro-cli") {
                 home.file = lib.mkIf (enabled "kiro-cli") (
-                  (mkSkillFileAttrs {
+                  mkSkillFileAttrs {
                     baseDir = ".kiro/skills";
                     inherit pkgs;
-                  })
-                  // {
-                    ".kiro/steering/artifacts.md".source = rulesFile;
                   }
                 );
               })
@@ -203,9 +193,6 @@
                     inherit pkgs;
                   }
                 );
-                programs.pi-coding-agent.context = lib.mkIf (enabled "pi-coding-agent") (
-                  lib.mkAfter ruleText
-                );
               })
             ]
           );
@@ -215,7 +202,6 @@
       lib = {
         inherit
           skillNames
-          rulesFile
           artifactsScript
           mkIridescentArtifacts
           mkSkillDir

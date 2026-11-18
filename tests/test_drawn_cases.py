@@ -1,14 +1,10 @@
 from pathlib import Path
 import unittest
 
-from draw_support import (
-    reference_text,
-    run_cli,
-    section,
-    skill_text,
-    workspace,
-    write_graph,
-)
+try:
+    from draw_support import reference_text, run_cli, section, skill_text, workspace, write_graph
+except ModuleNotFoundError:
+    from tests.draw_support import reference_text, run_cli, section, skill_text, workspace, write_graph
 
 RULES = "Rules"
 WORKFLOW = "Workflow"
@@ -76,7 +72,7 @@ class S02Tests(unittest.TestCase):
 
 class S03Tests(unittest.TestCase):
     def test_c01_rules_mark_authoritative_records(self):
-        rules = (Path(__file__).resolve().parent.parent / "rules/artifacts.md").read_text(encoding="utf-8")
+        rules = reference_text("doctor-iridescent", "artifacts.md")
         assert "authoritative" in rules and "root records" in rules
 
     def test_c02_doctor_handles_detail_files(self):
@@ -163,7 +159,7 @@ class S04Tests(unittest.TestCase):
             assert "Wrong path for detail" in result.stderr
 
     def test_c06_rules_describe_detail_fields(self):
-        rules = (Path(__file__).resolve().parent.parent / "rules/artifacts.md").read_text(encoding="utf-8")
+        rules = reference_text("doctor-iridescent", "artifacts.md")
         assert "Detail fields" in rules
 
 
@@ -217,7 +213,7 @@ class S06Tests(unittest.TestCase):
             assert "Wrong path for detail" in result.stderr
 
     def test_c04_rules_require_verify_links(self):
-        rules = (Path(__file__).resolve().parent.parent / "rules/artifacts.md").read_text(encoding="utf-8")
+        rules = reference_text("doctor-iridescent", "artifacts.md")
         assert "verify-links" in rules
 
     def test_c05_cli_reports_missing_detail_file(self):
