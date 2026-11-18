@@ -24,7 +24,10 @@ disable-model-invocation: true
 - Include strictly `outcome`, `verify`, `files`, `notes`, `risk`, `detail`, and `cases`; never add requirements, design, spec, or review breakdowns.
 - The detail fields are contract: keep `detail` before `cases` and preserve exact field names.
 - Require a concrete verifiable outcome and command from the start; write zero stubs.
-- Keep tasks atomic; split a task that satisfies unrelated specs.
+- Active `Txx` records must reference live `Sxx` IDs; never plan against superseded IDs.
+- Group cases by seam, module, and verify command; one `Txx` may cover many cases when they share all three.
+- Split a task that satisfies unrelated specs, owners, or rollback units.
+- Write each `Txx`, its detail file, its `Cases:` links, and its blockers in the same invocation.
 - Ask questions strictly when task granularity, dependency ordering, or verification command selection is ambiguous; use the host's structured question tool with 2-4 options, a recommendation, and answer consequences, and never re-litigate accepted specs or decisions.
 - Edit only `.artifacts/TASKS.md`; never mark parent specs or decisions complete (conversion is derived strictly from child references).
 - Verify: `scripts/iridescent-artifacts check` and `verify-links` output OK, undrawn-specs output is `NONE`, and `frontier` lists ready tasks.

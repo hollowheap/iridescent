@@ -35,6 +35,8 @@ LEDGER_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Ledger:[ \t]*(.+)$", re.IGNORECASE
 DETAIL_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Detail:[ \t]*(.+)$", re.IGNORECASE)
 CASES_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Cases:[ \t]*(.+)$", re.IGNORECASE)
 CASE_HEADER_RE = re.compile(r"^###[ \t]+(C\d+)\b")
+SUPERSEDES_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Supersedes:[ \t]*(.+)$", re.IGNORECASE)
+COVERS_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Covers:[ \t]*(.+)$", re.IGNORECASE)
 
 
 def atomic_write_text(path: Path, content: str) -> None:
@@ -170,6 +172,24 @@ class ArtifactsRepository:
         for match in re.finditer(r"^### (C\d+):.*?(?=^### |\Z)", text, re.MULTILINE | re.DOTALL):
             blocks.setdefault(match.group(1), []).append(match.group(0))
         return blocks
+
+    def superseded_ids(self) -> Set[str]:
+        superseded: Set[str] = set()
+        for node in self.reqs + self.specs:
+            raw = self.detail_value(node, SUPERSEDES_DETAIL_RE)
+            if raw:
+                superseded.update(t for t in re.split(r"[,\s]+", raw) if t)
+        return superseded
+
+    def superseded_case_refs(self) -> Set[str]:
+        refs: Set[str] = set()
+        for spec_id in self.superseded_ids():
+            if not spec_id.startswith("S"):
+                continue
+            ledger = self.root / "tests" / f"{spec_id}.md"
+            for case_id in self.ledger_cases(ledger):
+                refs.add(f"{spec_id}/{case_id}")
+        return refs
 
     def parse_file(self, file_name: str, kind: str) -> List[Node]:
         path = self.root / file_name
@@ -772,6 +792,28 @@ class ArtifactsRepository:
 
         spec_by_id = {s.id: s for s in self.specs}
         case_sets: Dict[str, Set[str]] = {}
+        superseded = self.superseded_ids()
+        superseded_refs = self.superseded_case_refs()
+
+        for node in self.reqs + self.decs + self.specs + self.tasks:
+            for pid in node.parent_ids:
+                if pid in superseded:
+                    print(
+                        f"Active reference to superseded ID: {pid} in {node.id}",
+                        file=sys.stderr,
+                    )
+                    errors += 1
+            supersedes = self.detail_value(node, SUPERSEDES_DETAIL_RE)
+            if supersedes:
+                for target in re.split(r"[,\s]+", supersedes):
+                    if not target:
+                        continue
+                    if target not in self.nodes:
+                        print(
+                            f"Unresolved Supersedes: {target} for {node.id}",
+                            file=sys.stderr,
+                        )
+                        errors += 1
 
         for spec in self.specs:
             expected = (Path("tests") / f"{spec.id}.md").as_posix()
@@ -806,6 +848,19 @@ class ArtifactsRepository:
                 print(f"Missing cases: {expected} for {spec.id}", file=sys.stderr)
                 errors += 1
             for case_id, blocks in self.ledger_case_blocks(ledger).items():
+                for line in blocks[0].splitlines():
+                    covers_match = COVERS_DETAIL_RE.match(line)
+                    if not covers_match:
+                        continue
+                    for target in re.split(r"[,\s]+", covers_match.group(1)):
+                        if not target:
+                            continue
+                        if target not in superseded_refs:
+                            print(
+                                f"Unresolved Covers: {target} for {spec.id}/{case_id}",
+                                file=sys.stderr,
+                            )
+                            errors += 1
                 if len(blocks) > 1:
                     print(
                         f"Duplicate case ID in ledger: {case_id} for {spec.id}",
@@ -907,6 +962,8 @@ class ArtifactsRepository:
                         referenced[spec_id].add(case_id)
 
         for spec_id, cases in case_sets.items():
+            if spec_id in superseded:
+                continue
             spec = spec_by_id.get(spec_id)
             for case_id in sorted(cases - referenced.get(spec_id, set())):
                 message = f"Unreferenced case: {case_id} for {spec_id}"

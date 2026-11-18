@@ -11,6 +11,7 @@
 - Action: <observable action>
 - Expect: <observable result>
 - Red: <exact command and expected failure>
+- Covers: <superseded-spec>/<case>   # restoration only
 
 ## Coverage
 

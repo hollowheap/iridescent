@@ -20,9 +20,10 @@ disable-model-invocation: true
 
 ## Rules
 
-- Process one `Sxx` at a time.
+- Process one `Sxx` at a time; one ledger and its `Ledger:` link are a single atomic write.
 - Assert observable behavior only; never mirror internal steps.
 - Require one case focused on one observable behavior and a Red command per case.
+- Coverage-restoration cases declare `Covers: Sxx/Cxx` and a fresh red command.
 - Require at least one case for every recorded failure and both sides of a shared seam.
 - Keep every test red for the expected reason; never weaken assertions or skip tests.
 - Never edit production source, specs beyond the ledger link, or task records.

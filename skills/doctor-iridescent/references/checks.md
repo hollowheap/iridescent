@@ -6,3 +6,5 @@
 4. **Gitignore coverage**: Ensure `.gitignore` includes `.artifacts/` (replacing any legacy `artifacts/` ignore pattern when migrating).
 5. **Context & AGENTS budgets**: Ensure `.artifacts/CONTEXT.md` (`## Stack & Entrypoints`, `## Module Seams`) and `AGENTS.md` (`## Essential Commands`, `## Conventions`) are each under 60 lines; relocate any `## Commands` section from `.artifacts/CONTEXT.md` into `AGENTS.md` `## Essential Commands`.
 6. **Graph & link integrity**: Run `scripts/iridescent-artifacts check` and `scripts/iridescent-artifacts verify-links`; fix broken links or malformed references while preserving RDST IDs, and route stale code-to-spec content to the `update` skill.
+7. **Target-state request**: Use the canonical target in `SKILL.md`, `references/slicing.md`, and `references/artifacts.md`; emit required records, links, and owning skills before naming observed drift. Never derive the target from current files.
+8. **Supersession integrity**: Confirm `Supersedes` and `Covers` targets resolve, no active parent references a superseded ID, and superseded targets are named by active `Supersedes` fields; route gaps to `update`.
