@@ -169,11 +169,11 @@ class ArtifactsRepository:
                 if self.detail_value(node, pattern):
                     print(f"{label} outside DECISIONS.md: {node.id}", file=sys.stderr)
                     errors += 1
-        archive_decs = self.archive_ids("D", "DECISIONS.md")
+        decision_ids = {dec.id for dec in self.decs}
         for dec in self.decs:
             raw = self.detail_value(dec, SUPERSEDES_DETAIL_RE)
             for target in re.split(r"[,\s]+", raw) if raw else []:
-                if target and target not in archive_decs:
+                if target and target not in decision_ids:
                     print(f"Unresolved Supersedes: {target} for {dec.id}", file=sys.stderr)
                     errors += 1
             for label, pattern in zip(labels[1:], forbidden[1:]):
@@ -828,9 +828,149 @@ class ArtifactsRepository:
 
         print("OK")
 
+    def archived_subtree(self) -> List[Node]:
+        retired = set(self.superseded_ids())
+        collected: List[Node] = []
+        seen: Set[str] = set()
+
+        def visit(node: Node) -> None:
+            for child in node.children:
+                if child.id in seen:
+                    continue
+                seen.add(child.id)
+                collected.append(child)
+                visit(child)
+
+        for decision in self.decs:
+            if decision.id in retired:
+                visit(decision)
+        return collected
+
+    @staticmethod
+    def append_archive_record(path: Path, section: str, node: Node) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        block = "\n".join([node.raw_header, *node.details]).rstrip() + "\n"
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(f"\n## {section}\n\n{block}")
+
+    @staticmethod
+    def remove_blank_brackets(header: str, archived: Set[str]) -> str:
+        def repl(match: re.Match[str]) -> str:
+            values = [value.strip() for value in match.group(1).split(",")]
+            kept = [value for value in values if value not in archived]
+            if not kept:
+                return " "
+            return " [" + ", ".join(kept) + "]"
+
+        return BLOCKED_TRAILING_RE.sub(repl, header)
+
+    def cmd_archive(self, dry_run: bool = False) -> None:
+        archived = self.archived_subtree()
+        if not archived:
+            print("NONE")
+            return
+
+        archived_ids = {node.id for node in archived}
+        for node in self.reqs + self.specs + self.tasks:
+            if node.id in archived_ids:
+                continue
+            for pid in node.parent_ids:
+                if pid in archived_ids:
+                    print(
+                        f"Active reference to archived ID: {pid} in {node.id}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+            for blocker in node.blocked_by:
+                if blocker in archived_ids:
+                    print(
+                        f"Active blocker references archived ID: {blocker} in {node.id}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+
+        if dry_run:
+            for node in archived:
+                print(f"{node.kind} {node.id}")
+            return
+
+        archive_root = self.root / "archive"
+        archive_names = {
+            "REQ": "REQUIREMENTS.md",
+            "SPEC": "SPECS.md",
+            "TASK": "TASKS.md",
+        }
+        titles = {
+            "REQ": "# Archived Requirements\n",
+            "SPEC": "# Archived Specs\n",
+            "TASK": "# Archived Tasks\n",
+        }
+        for kind, file_name in archive_names.items():
+            path = archive_root / file_name
+            if not path.exists():
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(titles[kind], encoding="utf-8")
+
+        for node in archived:
+            if node.kind in archive_names:
+                self.append_archive_record(
+                    archive_root / archive_names[node.kind], node.section, node
+                )
+            if node.kind == "SPEC":
+                tests = self.detail_value(node, TESTS_DETAIL_RE)
+                if tests:
+                    test_path = self.root.parent / tests
+                    cases = sorted(self.case_ids_in_text(test_path.read_text(encoding="utf-8")))
+                    case_path = archive_root / "tests" / f"{node.id}.md"
+                    case_path.parent.mkdir(parents=True, exist_ok=True)
+                    lines = [f"# Archived Cases: {node.id}", ""]
+                    lines.extend(f"- {case_id}" for case_id in cases)
+                    lines.append(f"- Test file: {tests}")
+                    case_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
+        by_file: Dict[Path, List[Tuple[int, int]]] = {}
+        for node in archived:
+            if not node.file_path.is_file():
+                continue
+            start = node.line_number - 1
+            end = start + 1 + len(node.details)
+            by_file.setdefault(node.file_path, []).append((start, end))
+        for file_path, ranges in by_file.items():
+            lines = file_path.read_text(encoding="utf-8").splitlines()
+            for start, end in sorted(ranges, reverse=True):
+                del lines[start:end]
+            rewritten = []
+            for line in lines:
+                header = HEADER_RE.match(line)
+                if header and normalize_id(header.group(2)) not in archived_ids:
+                    line = self.remove_blank_brackets(line, archived_ids)
+                rewritten.append(line)
+            cleaned = []
+            previous_blank = False
+            for line in rewritten:
+                blank = not line.strip()
+                if blank and previous_blank:
+                    continue
+                cleaned.append(line)
+                previous_blank = blank
+            file_path.write_text("\n".join(cleaned).rstrip() + "\n", encoding="utf-8")
+
+        detail_root = self.root / "tasks"
+        for node in archived:
+            if node.kind == "TASK":
+                detail = detail_root / f"{node.id}.md"
+                if detail.is_file():
+                    target = archive_root / "tasks" / detail.name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(detail.read_text(encoding="utf-8"), encoding="utf-8")
+                    detail.unlink()
+
+        for node in archived:
+            print(f"Archived {node.kind} {node.id}")
+
 def print_usage():
     print(
-        "Usage: iridescent-artifacts <status|active-decisions|unconverted-reqs|unconverted-decs|unconverted-specs|undrawn-specs|next-cases|next-task|frontier|next-id <r|d|s|t>|tree [ID]|trace <ID>|check|verify-links>",
+        "Usage: iridescent-artifacts <status|active-decisions|archive [--dry-run]|unconverted-reqs|unconverted-decs|unconverted-specs|undrawn-specs|next-cases|next-task|frontier|next-id <r|d|s|t>|tree [ID]|trace <ID>|check|verify-links>",
         file=sys.stderr,
     )
     sys.exit(2)
@@ -847,6 +987,8 @@ def main():
         repo.cmd_status()
     elif cmd == "active-decisions":
         repo.cmd_active_decisions()
+    elif cmd == "archive":
+        repo.cmd_archive("--dry-run" in sys.argv[2:])
     elif cmd == "unconverted-reqs":
         repo.cmd_unconverted_reqs()
     elif cmd == "unconverted-decs":

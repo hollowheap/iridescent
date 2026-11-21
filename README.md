@@ -23,6 +23,7 @@ Python 3 standard-library CLI with a skill-local wrapper and CLI copy under `<sk
 ```sh
 scripts/iridescent-artifacts status
 scripts/iridescent-artifacts active-decisions
+scripts/iridescent-artifacts archive [--dry-run]
 scripts/iridescent-artifacts undrawn-specs
 scripts/iridescent-artifacts next-task
 scripts/iridescent-artifacts frontier

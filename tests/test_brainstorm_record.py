@@ -26,15 +26,15 @@ class BrainstormRecordTests(unittest.TestCase):
     def test_facts_cite_local_evidence(self):
         self.assertIn(".artifacts/", self.section("Facts"))
 
-    def test_decision_seeds_name_design(self):
+    def test_options_name_design(self):
         self.assertIn("`design`", self.section("Options"))
 
-    def test_no_interrogation_fields(self):
+    def test_no_question_fields(self):
         text = self.text().lower()
         self.assertNotIn("## approval", text)
         self.assertNotIn("structured question", text)
 
-    def test_no_archetype_ceremony(self):
+    def test_no_fixed_comparison_sections(self):
         text = self.text()
         self.assertNotIn("## Archetypes", text)
         self.assertNotIn("## Trade-offs", text)

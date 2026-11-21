@@ -26,7 +26,7 @@ Agent-heavy. Propose the canonical slice and shared-seam roster, concurrency, an
 ## Report
 
 Each finding: `Current` (`file:line`), `Gap`, `Failure/impact`, `Config` (minimal shape), `Source`, `Default check`, `Confidence`.
-Add `## Lens ledger`, `## Failure modes`, `## Seams`, `## Rejected defaults`, and `## Blocking Design Forks`.
+Add `## Failure modes`, `## Seams`, `## Rejected defaults`, and `## Blocking Design Forks`.
 
 ## Verify
 

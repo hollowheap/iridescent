@@ -7,7 +7,7 @@ disable-model-invocation: true
 ## Scope
 
 - Covers: destination, audience, constraints, verified facts, and options from the supplied request.
-- Excludes: interrogation, accepted decisions, specs, tasks, implementation, and open-ended exploration.
+- Excludes: user questions, accepted decisions, specs, tasks, implementation, and open-ended exploration.
 
 ## Workflow
 

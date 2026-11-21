@@ -30,7 +30,7 @@ disable-model-invocation: true
 
 - Follow `references/tdd.md` for non-trivial behavior, bugs, and real seams; trivial one-liners and Quick changes may use the task verify.
 - Load `references/principles.md`, `references/tdd.md`, and triggered `references/boundaries.md`.
-- Never interrogate the user during implementation; escalate missing contracts or forks strictly to `specify` or `design`.
+- Never ask the user during implementation; escalate missing contracts or forks strictly to `specify` or `design`.
 - Reproduce failures first, then prove fixes with the same command.
 - Test strictly observable behavior at the public seam; never mirror private implementation steps.
 - Read strictly the task, spec, decision, cited architecture section, and target slice files from `next-task`.
