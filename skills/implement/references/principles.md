@@ -1,23 +1,28 @@
 # Implementation Principles
 
-## Simplicity & Minimal Surface
+Always load before writing non-trivial code; self-audit `git diff` against every section before review handoff.
 
-- Inline single-caller logic; introduce helpers, interfaces, or options only when backed by multiple callers, adapters, or requirements.
-- Use the standard library or existing workspace dependencies before introducing a new package.
-- Keep diffs strictly surgical and scoped to the lines required by the task; never refactor unrelated code or reformat untouched blocks.
-- Comment only non-obvious invariants, protocol constraints, or trade-offs, never control-flow narration.
+## Simplicity & Anti-Slop
+
+- Inline shallow 1:1 wrappers, single-caller helpers, and single-adapter interfaces with no second consumer or test seam.
+- Reject speculative flags, env vars, unread options, duplicate cross-layer validation, and unneeded dependencies when stdlib or workspace tools suffice.
+- Apply the deletion test: keep structural depth only for multiple real adapters, an external boundary, a measured bottleneck, or a concurrency or compliance invariant.
+- Delete dead code in touched files (unused imports, flags, branches, unreachable helpers) without reformatting or refactoring untouched blocks.
+- Apply Chesterton's Fence: prove why an existing guard, invariant, or ordering exists before removing or simplifying it.
+- Preserve outputs, errors, side effects, and ordering when simplifying; keep existing tests passing unchanged.
+- Separate behavior-preserving refactors from feature changes into distinct steps; use named remedies (inline seam, collapse duplicate branches, replace condition chains with a model or dispatcher, move logic to owner, reuse canonical helper).
+- Comment only non-obvious invariants, protocol constraints, or trade-offs; never narrate control flow or restate code.
 
 ## Architecture & Seams
 
-- Keep changes strictly inside the owning vertical slice and respect inward dependency direction.
-- Keep core domain logic free of HTTP transport, database clients, ORMs, and CLI/framework glue.
+- Keep changes inside the owning vertical slice; keep core domain logic free of HTTP transport, DB clients, ORMs, and CLI/framework glue.
+- Point dependencies inward: domain defines ports, adapters implement them, and domain logic runs in memory without DB drivers or HTTP servers.
 - Read configuration, environment variables, and mutable globals strictly at the composition root; pass dependencies explicitly into domain logic.
-- Hide internal data structures and storage mechanics behind narrow module boundaries.
+- Design deep modules that hide internal state and storage mechanics behind narrow public seams; protect or migrate all existing consumers together.
 
-## Boundaries, Data & Operations
+## Slice Failure & Enforcement
 
-- **API & Transport**: Validate schemas at the edge, keep handlers thin, map domain errors to a uniform error envelope, and set explicit timeouts, retries, and cancellation on outbound calls.
-- **Data & Persistence**: Wrap multi-step writes in a transaction or make them idempotent on retry; use expand-and-contract steps for schema or state changes; close connections, cursors, and pools on error and shutdown.
-- **Security**: Enforce authz and input validation strictly at trust boundaries; never hardcode or log secrets, tokens, or raw credentials.
-- **Performance**: Bound batch sizes, pagination, and in-memory buffers; keep collection queries batched (no N+1 queries) and reuse allocations on hot paths.
-- **UI**: Use semantic elements, preserve keyboard focus and ARIA state, and use existing design tokens.
+- Validate and reject invalid, missing, or hostile inputs at the boundary; ensure defaults fail safe without undocumented state.
+- Guard multi-step or external work against partial failure so half-written or unrecoverable state cannot persist.
+- Handle concurrency, ordering, and duplicate delivery explicitly; close connections, cursors, locks, and pools cleanly on success, error, and shutdown.
+- Fix recurring mistakes at the highest effective layer (architecture, types, lint/CI naming the replacement, tests, then docs); prove new guards fail on real past mistakes and require a reason, expiry date, and human approval for exceptions.

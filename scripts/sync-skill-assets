@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+ASSETS = ROOT / "assets"
+SKILLS = ROOT / "skills"
+
+CONTRACT_TARGETS = ("design", "specify", "doctor-iridescent")
+CLI_TARGETS = (
+    "design",
+    "doctor-iridescent",
+    "draw",
+    "how-to-iridescent",
+    "implement",
+    "plan",
+    "review",
+    "specify",
+    "update",
+)
+DOCTOR_TEMPLATES = (
+    "AGENTS.md",
+    "CONTEXT.md",
+    "ARCHITECTURE.md",
+    "REQUIREMENTS.md",
+    "DECISIONS.md",
+    "SPECS.md",
+    "TASKS.md",
+    "REVIEWS.md",
+    "review-record.md",
+    "task-detail.md",
+    "archive-DECISIONS.md",
+    "archive-SPECS.md",
+    "archive-task-detail.md",
+)
+HEADING_RULES = {
+    "templates/AGENTS.md": ("# ", "## Scope"),
+    "templates/BRAINSTORM.md": ("# Brainstorm: ", "## Destination", "## Facts", "## Options"),
+    "templates/CONTEXT.md": ("# Context", "## Glossary"),
+    "templates/ARCHITECTURE.md": ("# Architecture", "## "),
+    "templates/REQUIREMENTS.md": ("# Requirements", "## "),
+    "templates/DECISIONS.md": ("# Decisions", "## "),
+    "templates/SPECS.md": ("# Specs", "## "),
+    "templates/TASKS.md": ("# Tasks", "## "),
+    "templates/REVIEWS.md": ("# Persistent Reviews",),
+    "templates/review-record.md": ("# Review: ", "## Scope", "## Findings", "## Verification"),
+    "templates/task-detail.md": ("# Task Detail: ", "## Steps", "## Notes", "## Risk"),
+    "templates/archive-DECISIONS.md": ("# Archived Decisions", "## "),
+    "templates/archive-SPECS.md": ("# Archived Specs", "## "),
+    "templates/archive-task-detail.md": ("# Archived Task Detail: ",),
+    "contracts/artifacts.md": ("# Artifact Placement",),
+    "contracts/slicing.md": ("# Slice Boundaries",),
+}
+
+
+def read(rel: str) -> str:
+    return (ASSETS / rel).read_text(encoding="utf-8")
+
+
+def outputs() -> dict[str, str]:
+    generated: dict[str, str] = {}
+    for name in ("artifacts.md", "slicing.md"):
+        text = read(f"contracts/{name}")
+        for skill in CONTRACT_TARGETS:
+            generated[f"skills/{skill}/references/{name}"] = text
+    cli = (ROOT / "scripts" / "iridescent-artifacts").read_text(encoding="utf-8")
+    wrapper = read("scripts/iridescent-artifacts")
+    for skill in CLI_TARGETS:
+        generated[f"skills/{skill}/scripts/iridescent-artifacts"] = wrapper
+        generated[f"skills/{skill}/scripts/iridescent-artifacts-cli"] = cli
+    for skill in ("init", "update"):
+        for name in ("AGENTS.md", "CONTEXT.md", "ARCHITECTURE.md"):
+            generated[f"skills/{skill}/references/{name}"] = read(f"templates/{name}")
+    generated["skills/brainstorm/references/template.md"] = read("templates/BRAINSTORM.md")
+    generated["skills/design/references/REQUIREMENTS.md"] = read("templates/REQUIREMENTS.md")
+    generated["skills/design/references/DECISIONS.md"] = read("templates/DECISIONS.md")
+    generated["skills/design/references/ARCHITECTURE.md"] = read("templates/ARCHITECTURE.md")
+    generated["skills/plan/references/TASKS.md"] = read("templates/TASKS.md")
+    generated["skills/plan/references/task-detail.md"] = read("templates/task-detail.md")
+    generated["skills/specify/references/SPECS.md"] = read("templates/SPECS.md")
+    generated["skills/review/references/REVIEWS.md"] = read("templates/REVIEWS.md")
+    generated["skills/review/references/review-record.md"] = read("templates/review-record.md")
+    UPDATE_TEMPLATES = (
+        "REQUIREMENTS.md",
+        "DECISIONS.md",
+        "SPECS.md",
+        "TASKS.md",
+        "REVIEWS.md",
+        "review-record.md",
+        "task-detail.md",
+        "archive-DECISIONS.md",
+        "archive-SPECS.md",
+        "archive-task-detail.md",
+    )
+    for name in UPDATE_TEMPLATES:
+        generated[f"skills/update/references/{name}"] = read(f"templates/{name}")
+    for name in DOCTOR_TEMPLATES:
+        generated[f"skills/doctor-iridescent/references/{name}"] = read(f"templates/{name}")
+    return generated
+
+
+def heading_errors() -> list[str]:
+    errors = []
+    for rel, required in HEADING_RULES.items():
+        text = read(rel)
+        for heading in required:
+            if heading == "# ":
+                found = bool(re.search(r"(?m)^# .+", text))
+            else:
+                found = any(line.startswith(heading) for line in text.splitlines())
+            if not found:
+                errors.append(f"{rel}: missing heading {heading}")
+    if not read("scripts/iridescent-artifacts").startswith("#!/usr/bin/env bash\n"):
+        errors.append("scripts/iridescent-artifacts: missing bash shebang")
+    if not (ROOT / "scripts" / "iridescent-artifacts").read_text(encoding="utf-8").startswith("#!/usr/bin/env python3\n"):
+        errors.append("cli/iridescent-artifacts: missing Python shebang")
+    return errors
+
+
+def main() -> int:
+    check = "--check" in sys.argv[1:]
+    errors = heading_errors()
+    for rel, content in outputs().items():
+        path = ROOT / rel
+        if check:
+            if not path.is_file():
+                errors.append(f"{rel}: missing generated copy")
+            elif path.read_text(encoding="utf-8") != content:
+                errors.append(f"{rel}: generated copy out of sync")
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+            if rel.endswith("/scripts/iridescent-artifacts"):
+                path.chmod(0o755)
+    if errors:
+        print("\n".join(errors), file=sys.stderr)
+        return 1
+    print("skill assets verified" if check else "skill assets synchronized")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

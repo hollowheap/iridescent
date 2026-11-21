@@ -51,7 +51,6 @@
         let
           dir = skillsRoot + "/${name}";
           files = lib.filesystem.listFilesRecursive dir;
-          helper = mkIridescentArtifacts pkgs;
         in
         pkgs.runCommandLocal "${prefix}-iridescent-${name}" { } ''
           mkdir -p "$out"
@@ -65,7 +64,6 @@
               install -D -m${mode} ${file} "$out/${rel}"
             ''
           ) files}
-          install -D -m0755 ${helper}/bin/iridescent-artifacts "$out/scripts/iridescent-artifacts"
         '';
 
       mkSkillDirs =
@@ -74,10 +72,7 @@
         lib.genAttrs skillNames (mkSkillDir pkgs { inherit prefix; });
 
       mkSkillFileAttrs =
-        {
-          baseDir,
-          pkgs ? null,
-        }:
+        { baseDir }:
         builtins.listToAttrs (
           builtins.concatLists (
             map (
@@ -85,32 +80,20 @@
               let
                 dir = skillsRoot + "/${name}";
                 files = lib.filesystem.listFilesRecursive dir;
-                renderedFiles = map (
-                  file:
-                  let
-                    rel = lib.removePrefix (toString dir + "/") (toString file);
-                  in
-                  {
-                    name = "${baseDir}/${name}/${rel}";
-                    value = {
-                      source = file;
-                      executable = lib.hasPrefix "scripts/" rel;
-                    };
-                  }
-                ) files;
-                helperEntry = {
-                  name = "${baseDir}/${name}/scripts/iridescent-artifacts";
-                  value =
-                    if pkgs != null then
-                      { source = "${mkIridescentArtifacts pkgs}/bin/iridescent-artifacts"; }
-                    else
-                      {
-                        source = artifactsScript;
-                        executable = true;
-                      };
-                };
               in
-              [ helperEntry ] ++ renderedFiles
+              map (
+                file:
+                let
+                  rel = lib.removePrefix (toString dir + "/") (toString file);
+                in
+                {
+                  name = "${baseDir}/${name}/${rel}";
+                  value = {
+                    source = file;
+                    executable = lib.hasPrefix "scripts/" rel;
+                  };
+                }
+              ) files
             ) skillNames
           )
         );
@@ -181,7 +164,6 @@
                 home.file = lib.mkIf (enabled "kiro-cli") (
                   mkSkillFileAttrs {
                     baseDir = ".kiro/skills";
-                    inherit pkgs;
                   }
                 );
               })
@@ -190,7 +172,6 @@
                 home.file = lib.mkIf (enabled "pi-coding-agent") (
                   mkSkillFileAttrs {
                     baseDir = "${config.programs.pi-coding-agent.configDir}/skills";
-                    inherit pkgs;
                   }
                 );
               })

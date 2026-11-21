@@ -8,19 +8,19 @@ Agent-heavy. Propose the canonical slice and shared-seam roster, concurrency, an
 
 ## Workflow
 
-1. Preflight: `scripts/iridescent-artifacts status`; read the canonical vertical slices from `.artifacts/REQUIREMENTS.md` and `.artifacts/ARCHITECTURE.md`; start only from a clean baseline, never mid-rewrite.
+1. Preflight: `<skill-dir>/scripts/iridescent-artifacts status`; read canonical slices from `.artifacts/REQUIREMENTS.md` and `.artifacts/ARCHITECTURE.md`, prioritizing slices touched by recent git history; start from a clean baseline, never mid-rewrite.
 2. Dispatch one read-only subagent per approved slice (applying `references/slice.md` + triggered lenses) and per cross-cutting boundary (`references/seam.md`). Self-contained prompt: repo, slice/seam, option sweep, primary docs, failure paths, report shape, no edits. Persist `.artifacts/review/<slice>.md`.
 3. Reproduce high-impact claims locally. Separate dead config, missing recovery, and missing preference.
 4. Synthesize cross-slice findings by severity: data loss, lockout, exposure, dead config, seam drift. Name concrete contracts; never turn every finding into a knob.
 5. Flag unresolved design forks as blocking findings routed strictly to the `design` skill; never write `Rxx`, `Dxx`, `Sxx`, or `Txx` during review.
-6. Update `.artifacts/ARCHITECTURE.md` strictly under the `robust` profile (`diff`, `slice`, and `seam` profiles remain strictly read-only on it) with: System Shape, Module Seams, Framework & Library Choices, Data & Contracts, Operations & Security, Known Debt, Evidence.
+6. Compare recorded architecture with observed structure; report drift as a blocking finding routed to `update`.
 
 ## Evidence
 
 - Every finding names the failure and reproduction command.
 - "Could be configured" is not a finding.
 - Local files first, official docs second; reject options covered by modern upstream defaults under `Rejected defaults`.
-- Every claim needs `file:line` or a URL; mark the rest UNVERIFIED.
+- Every claim needs `file:line`, a URL, or a reproduction run; drop unrun behavioral speculation, and use `UNVERIFIED` only when an environment dependency is absent.
 - Treat child sessions as untrusted; verify tools, scope, and claims.
 
 ## Report

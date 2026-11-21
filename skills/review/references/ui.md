@@ -12,7 +12,7 @@ Rendered interfaces: markup, styles, components, layout, focus, motion, and desi
 
 ## Checks
 
-- When the `opal` skill is active, run its `ui-probe` CLI (`ui-probe audit <url>` and `ui-probe source .`); cite the report summary.
+- Run a reproducible rendered check from the workspace and cite its command and output.
 - Check accessible names, roles, and state (`aria-expanded`, `aria-controls`, `aria-selected`).
 - Check visible focus, keyboard order, and activation behavior.
 - Check contrast, layout, overflow, and touch targets against the design tokens.
@@ -22,7 +22,7 @@ Rendered interfaces: markup, styles, components, layout, focus, motion, and desi
 ## Evidence
 
 - Cite the probe report path and summary, or the supplied screenshot and `file:line`.
-- If `opal` is not invoked, list every rendered check under unverified and record the skip reason.
+- If no rendered command runs, list every rendered check under `UNVERIFIED` and record the skip reason.
 
 ## Verify
 

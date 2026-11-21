@@ -1,25 +1,10 @@
-# Architectural Exploration: <Topic>
+# Brainstorm: <Topic>
 
 ## Destination
-What changes for the user when this is done?
+What changes for the user, for whom, and why now.
 
-## References
-Primary sources and the `.artifacts/research/<topic>.md` notes.
+## Facts
+Verified repository or primary-source facts, with links to saved notes.
 
-## Archetypes
-- Archetype 1: <Name and philosophy>
-  - Structure: <file paths and seams>
-- Archetype 2: <Name and philosophy>
-  - Structure: <file paths and seams>
-
-## Trade-offs
-- Coupling: Archetype 1 (Low) vs Archetype 2 (High)
-- Blast radius: Archetype 1 (Isolated) vs Archetype 2 (Broad)
-- YAGNI: Archetype 1 (Clean) vs Archetype 2 (Premature)
-- Failure mode: Archetype 1 (<specific bug>) vs Archetype 2 (<specific drift>)
-
-## Recommendation
-Which archetype fits repository conventions and why, plus any deferred design forks for `design`.
-
-## Out of scope
-Explicit exclusions.
+## Options
+Candidate directions that `design` may turn into `Dxx`.

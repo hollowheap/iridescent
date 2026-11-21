@@ -1,0 +1,885 @@
+#!/usr/bin/env python3
+"""
+iridescent-artifacts: RDST trace stack navigator and verifier.
+Maintains the tree data structure of Requirements (REQ), Decisions (DEC),
+Specifications (SPEC), and Tasks (TASK).
+
+Enforces the completion invariant:
+"The parent is only completed when all of its children are completed."
+"""
+
+import os
+import re
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
+
+HEADER_RE = re.compile(
+    r"^[ \t]*-[ \t]*\[([ xX])\][ \t]+((?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+)\b(.*?)$"
+)
+BRACKET_RE = re.compile(
+    r"\[((?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+(?:\s*,\s*(?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+)*)\]"
+)
+CASE_BRACKET_RE = re.compile(r"\[((?:C\d+)(?:\s*,\s*C\d+)*)\]"
+)
+BLOCKED_TRAILING_RE = re.compile(
+    r"\[((?:TASK-|T)\d+(?:\s*,\s*(?:TASK-|T)\d+)*)\]\s*(?=:|$)", re.IGNORECASE
+)
+VERIFY_INLINE_RE = re.compile(r"(?:\||^-)[ \t]*Verify:[ \t]*(.+)$", re.IGNORECASE)
+VERIFY_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Verify:[ \t]*(.+)$", re.IGNORECASE)
+ARCH_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*(?:Arch|Architecture):[ \t]*(.+)$", re.IGNORECASE)
+
+TESTS_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Tests:[ \t]*(.+)$", re.IGNORECASE)
+DETAIL_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Detail:[ \t]*(.+)$", re.IGNORECASE)
+CASES_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Cases:[ \t]*(.+)$", re.IGNORECASE)
+SUPERSEDES_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Supersedes:[ \t]*(.+)$", re.IGNORECASE)
+STALE_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Stale:[ \t]*(.+)$", re.IGNORECASE)
+COVERS_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Covers:[ \t]*(.+)$", re.IGNORECASE)
+
+
+def normalize_id(raw: str) -> str:
+    """Normalizes identifiers like REQ-01 -> R01, TASK-05 -> T05."""
+    raw = raw.strip()
+    if raw.startswith("REQ-"):
+        return "R" + raw[4:]
+    if raw.startswith("DEC-"):
+        return "D" + raw[4:]
+    if raw.startswith("SPEC-"):
+        return "S" + raw[5:]
+    if raw.startswith("TASK-"):
+        return "T" + raw[5:]
+    return raw
+
+
+@dataclass
+class Node:
+    kind: str  # "REQ", "DEC", "SPEC", "TASK"
+    id: str  # Normalized ID (e.g., "R01", "D22", "S43", "T05")
+    raw_id: str  # As appeared in source file (e.g., "R01" or "REQ-01")
+    checked: bool  # Checkbox state in markdown: True if [x], False if [ ]
+    raw_header: str  # Original line text
+    title: str  # Cleaned title description
+    parent_ids: List[str] = field(default_factory=list)  # Referenced parent IDs
+    case_ids: List[str] = field(default_factory=list)  # Case IDs carried in task headers
+    blocked_by: List[str] = field(default_factory=list)  # For tasks: dependency task IDs
+    verify_cmd: Optional[str] = None
+    arch_section: Optional[str] = None
+    section: str = ""
+    details: List[str] = field(default_factory=list)  # Indented description lines
+    file_path: Path = Path()
+    line_number: int = 0
+
+    # Bidirectional tree graph edges
+    parents: List["Node"] = field(default_factory=list)
+    children: List["Node"] = field(default_factory=list)
+
+    def is_leaf(self) -> bool:
+        return len(self.children) == 0
+
+    def is_tree_completed(self) -> bool:
+        """
+        Recursive completion logic:
+        - A leaf task is complete iff its checkbox is checked [x].
+        - A parent node is complete iff it has children AND ALL children are tree-completed.
+        - If a spec has no child tasks, its own checkbox governs if explicitly verified.
+        """
+        if self.kind == "TASK":
+            return self.checked
+        if not self.children:
+            return self.checked
+        return all(child.is_tree_completed() for child in self.children)
+
+
+class ArtifactsRepository:
+    def __init__(self, artifacts_dir: Optional[Path] = None):
+        if artifacts_dir is None:
+            env_dir = os.environ.get("ARTIFACTS_DIR")
+            if env_dir:
+                self.root = Path(env_dir)
+            else:
+                # Discover repo root
+                cur = Path.cwd()
+                while cur != cur.parent:
+                    if (cur / ".artifacts").is_dir():
+                        self.root = cur / ".artifacts"
+                        break
+                    cur = cur.parent
+                else:
+                    self.root = Path(".artifacts")
+        else:
+            self.root = artifacts_dir
+
+        self.root.mkdir(parents=True, exist_ok=True)
+        gitignore = self.root / ".gitignore"
+        if not gitignore.is_file():
+            gitignore.write_text("*\n!.gitignore\n", encoding="utf-8")
+
+        self.nodes: Dict[str, Node] = {}
+        self.duplicate_ids: List[Tuple[str, Node, Node]] = []
+        self.reqs: List[Node] = []
+        self.decs: List[Node] = []
+        self.specs: List[Node] = []
+        self.tasks: List[Node] = []
+        self.task_file = "TASKS.md" if (self.root / "TASKS.md").is_file() or not (self.root / "PLAN.md").is_file() else "PLAN.md"
+        self.parse_all()
+
+    @staticmethod
+    def detail_value(node: Node, pattern: re.Pattern) -> Optional[str]:
+        for line in node.details:
+            match = pattern.search(line)
+            if match:
+                return match.group(1).strip().strip("`")
+        return None
+
+    @staticmethod
+    def detail_values(node: Node, pattern: re.Pattern) -> List[str]:
+        values: List[str] = []
+        for line in node.details:
+            match = pattern.search(line)
+            if match:
+                values.append(match.group(1).strip().strip("`"))
+        return values
+
+    def superseded_ids(self) -> Set[str]:
+        superseded: Set[str] = set()
+        for dec in self.decs:
+            raw = self.detail_value(dec, SUPERSEDES_DETAIL_RE)
+            if raw:
+                superseded.update(t for t in re.split(r"[,\s]+", raw) if t)
+        return superseded
+
+    def archive_ids(self, prefix: str, file_name: str) -> Set[str]:
+        archive_file = self.root / "archive" / file_name
+        if not archive_file.is_file():
+            return set()
+        pattern = re.compile(rf"(?m)^- \[[ xX]\] ({prefix}\d+)\b")
+        return set(pattern.findall(archive_file.read_text(encoding="utf-8")))
+
+    @staticmethod
+    def case_ids_in_text(text: str) -> Set[str]:
+        return set(re.findall(r"\bC\d+\b", text))
+
+    def validate_retirement_scope(self) -> int:
+        errors = 0
+        forbidden = (SUPERSEDES_DETAIL_RE, STALE_DETAIL_RE, COVERS_DETAIL_RE)
+        labels = ("Supersedes", "Stale", "Covers")
+        for node in self.reqs + self.specs + self.tasks:
+            for label, pattern in zip(labels, forbidden):
+                if self.detail_value(node, pattern):
+                    print(f"{label} outside DECISIONS.md: {node.id}", file=sys.stderr)
+                    errors += 1
+        archive_decs = self.archive_ids("D", "DECISIONS.md")
+        for dec in self.decs:
+            raw = self.detail_value(dec, SUPERSEDES_DETAIL_RE)
+            for target in re.split(r"[,\s]+", raw) if raw else []:
+                if target and target not in archive_decs:
+                    print(f"Unresolved Supersedes: {target} for {dec.id}", file=sys.stderr)
+                    errors += 1
+            for label, pattern in zip(labels[1:], forbidden[1:]):
+                if self.detail_value(dec, pattern):
+                    print(f"{label} field is retired: {dec.id}", file=sys.stderr)
+                    errors += 1
+        return errors
+
+    def parse_file(self, file_name: str, kind: str) -> List[Node]:
+        path = self.root / file_name
+        if not path.is_file():
+            return []
+
+        nodes: List[Node] = []
+        current: Optional[Node] = None
+        section = ""
+        arch_heading = ""
+
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for idx, line in enumerate(lines, start=1):
+            if line.startswith("### "):
+                arch_heading = ""
+                current = None
+                continue
+            if line.startswith("#### "):
+                arch_heading = line[5:].strip()
+                current = None
+                continue
+            if line.startswith("## "):
+                section = line[3:].strip()
+                arch_heading = section if kind == "DEC" else ""
+                current = None
+                continue
+            if line.startswith("# "):
+                section = ""
+                arch_heading = ""
+                current = None
+                continue
+
+            m = HEADER_RE.match(line)
+            if m:
+                checked = m.group(1).lower() == "x"
+                raw_id = m.group(2)
+                item_id = normalize_id(raw_id)
+                rest = m.group(3)
+
+                blocked_by = []
+                b_match = BLOCKED_TRAILING_RE.search(rest)
+                if b_match:
+                    raw_deps = b_match.group(1)
+                    rest = rest[: b_match.start()].rstrip()
+                else:
+                    raw_deps = ""
+
+                for dep in re.split(r"[, \t]+", raw_deps.strip()):
+                    dep = dep.strip()
+                    if dep and dep.lower() != "none":
+                        blocked_by.append(normalize_id(dep))
+
+                case_ids: List[str] = []
+                for group in CASE_BRACKET_RE.findall(rest):
+                    for part in re.split(r"\s*,\s*", group):
+                        part = part.strip()
+                        if part:
+                            case_ids.append(normalize_id(part))
+
+                parent_ids = []
+                for group in BRACKET_RE.findall(rest):
+                    for part in re.split(r"\s*,\s*", group):
+                        part = part.strip()
+                        if part:
+                            parent_ids.append(normalize_id(part))
+
+                verify_cmd = None
+                v_match = VERIFY_INLINE_RE.search(rest)
+                if v_match:
+                    verify_cmd = v_match.group(1).strip()
+
+                title = rest
+                title = BRACKET_RE.sub("", title)
+                title = CASE_BRACKET_RE.sub("", title)
+                if verify_cmd:
+                    title = VERIFY_INLINE_RE.sub("", title)
+                title = title.strip().lstrip(":").strip().rstrip("|").strip()
+
+                current = Node(
+                    kind=kind,
+                    id=item_id,
+                    raw_id=raw_id,
+                    checked=checked,
+                    raw_header=line,
+                    title=title,
+                    parent_ids=parent_ids,
+                    blocked_by=blocked_by,
+                    verify_cmd=verify_cmd,
+                    case_ids=case_ids,
+                    section=section,
+                    arch_section=arch_heading if kind == "DEC" else (arch_heading if kind == "SPEC" else None),
+                    file_path=path,
+                    line_number=idx,
+                )
+                nodes.append(current)
+            elif current and (line.startswith("  ") or line.startswith("\t") or line.strip() == ""):
+                if line.strip():
+                    current.details.append(line)
+                    v_match = VERIFY_DETAIL_RE.search(line)
+                    if v_match and not current.verify_cmd:
+                        current.verify_cmd = v_match.group(1).strip()
+                    a_match = ARCH_DETAIL_RE.search(line)
+                    if a_match and not current.arch_section:
+                        current.arch_section = a_match.group(1).strip().strip("`").strip()
+            else:
+                current = None
+
+        return nodes
+
+    def parse_all(self):
+        self.nodes.clear()
+        self.duplicate_ids.clear()
+        self.reqs = self.parse_file("REQUIREMENTS.md", "REQ")
+        self.decs = self.parse_file("DECISIONS.md", "DEC")
+        self.specs = self.parse_file("SPECS.md", "SPEC")
+        self.tasks = self.parse_file(self.task_file, "TASK")
+
+        for node in self.reqs + self.decs + self.specs + self.tasks:
+            if node.id in self.nodes:
+                self.duplicate_ids.append((node.id, self.nodes[node.id], node))
+            else:
+                self.nodes[node.id] = node
+
+        # Build tree edges
+        # Tasks -> Specs
+        for task in self.tasks:
+            for pid in task.parent_ids:
+                if pid in self.nodes:
+                    parent = self.nodes[pid]
+                    task.parents.append(parent)
+                    parent.children.append(task)
+
+        # Specs -> Requirements
+        for spec in self.specs:
+            for pid in spec.parent_ids:
+                if pid in self.nodes and self.nodes[pid].kind == "REQ":
+                    parent = self.nodes[pid]
+                    spec.parents.append(parent)
+                    parent.children.append(spec)
+
+        # Requirements -> Decisions
+        for req in self.reqs:
+            for pid in req.parent_ids:
+                if pid in self.nodes and self.nodes[pid].kind == "DEC":
+                    parent = self.nodes[pid]
+                    req.parents.append(parent)
+                    parent.children.append(req)
+
+    def print_block(self, node: Node, show_location: bool = False):
+        if show_location and node.file_path and node.line_number:
+            print(f"<!-- {node.file_path.name}:{node.line_number} -->")
+        print(node.raw_header)
+        for d in node.details:
+            print(d)
+
+    # Subcommands
+    def cmd_status(self):
+        context_file = self.root / "CONTEXT.md"
+        context_status = "present" if context_file.is_file() and context_file.stat().st_size > 0 else "none"
+
+        open_reqs = [r for r in self.reqs if not (r.checked and r.is_tree_completed())]
+        open_decs = [d for d in self.decs if not (d.checked and d.is_tree_completed())]
+        open_specs = [s for s in self.specs if not (s.checked and s.is_tree_completed())]
+        open_tasks = [t for t in self.tasks if not (t.checked and t.is_tree_completed())]
+
+        print(
+            f"CONTEXT:{context_status} "
+            f"REQ:{len(open_reqs)} "
+            f"DEC:{len(open_decs)} "
+            f"SPEC:{len(open_specs)} "
+            f"TASK:{len(open_tasks)}"
+        )
+
+    def cmd_unconverted_reqs(self):
+        unconverted = [r for r in self.reqs if not r.children and not r.checked]
+        if not unconverted:
+            print("NONE")
+        else:
+            for r in unconverted:
+                print(r.raw_header)
+
+    def cmd_unconverted_decs(self):
+        unconverted = [d for d in self.decs if not d.children and not d.checked]
+        if not unconverted:
+            print("NONE")
+        else:
+            for d in unconverted:
+                print(d.raw_header)
+
+    def cmd_active_decisions(self):
+        superseded = self.superseded_ids()
+        active = [d for d in self.decs if d.id not in superseded]
+        if not active:
+            print("NONE")
+            return
+        for decision in active:
+            print(decision.raw_header)
+
+    def cmd_unconverted_specs(self):
+        unconverted = [s for s in self.specs if not s.children and not s.checked]
+        if not unconverted:
+            print("NONE")
+        else:
+            for s in unconverted:
+                print(s.raw_header)
+
+    def cmd_undrawn_specs(self):
+        undrawn = []
+        for spec in self.specs:
+            linked = self.detail_value(spec, TESTS_DETAIL_RE)
+            if not linked or not (self.root.parent / linked).is_file():
+                undrawn.append(spec)
+        if not undrawn:
+            print("NONE")
+            return
+        for spec in undrawn:
+            parents = ", ".join(spec.parent_ids)
+            suffix = f" [{parents}]" if parents else ""
+            print(f"{spec.id}{suffix}: {spec.title}")
+
+    def ready_tasks(self) -> List["Node"]:
+        done_ids = {t.id for t in self.tasks if t.checked}
+        return [
+            t for t in self.tasks
+            if not t.checked and all(b in done_ids for b in t.blocked_by)
+        ]
+
+    def cmd_next_cases(self):
+        ready = self.ready_tasks()
+        if not ready:
+            print("NONE")
+            return
+        task = ready[0]
+        case_ids = list(task.case_ids)
+        if not case_ids:
+            print("NONE")
+            return
+        for case_id in sorted(set(case_ids)):
+            print(f"{task.id} {case_id}")
+
+    def cmd_frontier(self):
+        ready = self.ready_tasks()
+        if not ready:
+            print("NONE")
+        else:
+            for t in ready:
+                loc = f" ({t.file_path.name}:{t.line_number})" if t.file_path and t.line_number else ""
+                print(f"{t.raw_header}{loc}")
+
+    def next_id(self, kind_arg: str) -> str:
+        k = kind_arg.lower()
+        if k in ("r", "req", "requirement"):
+            prefix = "R"
+            nodes = self.reqs
+        elif k in ("d", "dec", "decision"):
+            prefix = "D"
+            nodes = self.decs
+        elif k in ("s", "spec"):
+            prefix = "S"
+            nodes = self.specs
+        elif k in ("t", "task"):
+            prefix = "T"
+            nodes = self.tasks
+        else:
+            print("Error: next-id requires r|req, d|dec, s|spec, or t|task", file=sys.stderr)
+            sys.exit(2)
+
+        max_num = 0
+        ids = [n.id for n in nodes]
+        archive_files = {
+            "R": "REQUIREMENTS.md",
+            "D": "DECISIONS.md",
+            "S": "SPECS.md",
+            "T": "TASKS.md",
+        }
+        ids.extend(self.archive_ids(prefix, archive_files[prefix]))
+        for item_id in ids:
+            match = re.search(r"\d+", item_id)
+            if match:
+                val = int(match.group(0))
+                if val > max_num:
+                    max_num = val
+
+        return f"{prefix}{max_num + 1:02d}"
+
+    def cmd_next_task(self):
+        done_ids = {t.id for t in self.tasks if t.checked}
+        ready = [
+            t
+            for t in self.tasks
+            if not t.checked and (not t.blocked_by or all(dep in done_ids for dep in t.blocked_by))
+        ]
+        if not ready:
+            print("NONE")
+            return
+        task = ready[0]
+        spec = next((p for p in task.parents if p.kind == "SPEC"), None)
+        req = next((p for p in spec.parents if p.kind == "REQ"), None) if spec else None
+        dec = next((p for p in req.parents if p.kind == "DEC"), None) if req else None
+
+        print(f"TASK {task.raw_header} ({task.file_path.name}:{task.line_number})")
+        print(f"Slice: {task.section}")
+        print("Read:")
+        print(f"- {task.file_path.name}:{task.line_number} {task.id}")
+        if spec:
+            print(f"- {spec.file_path.name}:{spec.line_number} {spec.raw_header}")
+        if req:
+            print(f"- {req.file_path.name}:{req.line_number} {req.raw_header}")
+        if dec:
+            print(f"- {dec.file_path.name}:{dec.line_number} {dec.raw_header}")
+        if spec:
+            tests = self.detail_value(spec, TESTS_DETAIL_RE)
+            if tests:
+                print(f"Tests: {tests}")
+        if task.verify_cmd:
+            print(f"Verify: {task.verify_cmd}")
+        print(f"Receipt: tasks/{task.id}.md")
+        if task.blocked_by:
+            states = " ".join(
+                f"{b}[{'x' if b in done_ids else ' '}]" for b in task.blocked_by
+            )
+            print(f"Blocked-by: {states}")
+
+    def cmd_next_id(self, kind_arg: str):
+        print(self.next_id(kind_arg))
+
+    def cmd_tree(self, target_id: Optional[str] = None):
+        """
+        Renders the RDST tree data structure.
+        Shows completion checkbox [x] / [ ] and completion ratios for parents.
+        """
+        if target_id:
+            tid = normalize_id(target_id)
+            node = self.nodes.get(tid)
+            if not node:
+                print(f"Error: Node {target_id} not found", file=sys.stderr)
+                sys.exit(1)
+
+            print(f"Artifact Trace Tree for {node.id}:")
+            print("=" * (24 + len(node.id)))
+
+            # Print Ancestors lineage
+            def print_ancestor(n: Node, indent: str = ""):
+                box = "[x]" if n.is_tree_completed() else "[ ]"
+                ratio = f" ({sum(1 for c in n.children if c.is_tree_completed())}/{len(n.children)} complete)" if n.children else ""
+                print(f"{indent}{box} {n.id}: {n.title}{ratio}")
+                for p in n.parents:
+                    print_ancestor(p, indent + "  ▲ ")
+
+            if node.parents:
+                print("Ancestors:")
+                for p in node.parents:
+                    print_ancestor(p, "  ")
+                print("Target:")
+
+            self._render_subtree(node, "", True)
+            if node.blocked_by:
+                print("Blocked by:")
+                for b in node.blocked_by:
+                    b_node = self.nodes.get(b)
+                    b_status = "[x] (complete)" if (b_node and b_node.checked) else "[ ] (incomplete)"
+                    print(f"  └── {b} {b_status}")
+            return
+
+        print("RDST Artifact Trace Tree:")
+        print("=========================")
+        # Roots are requirements
+        for idx, req in enumerate(self.reqs):
+            is_last = idx == len(self.reqs) - 1
+            self._render_subtree(req, "", is_last)
+
+    def _render_subtree(self, node: Node, prefix: str, is_last: bool):
+        box = "[x]" if node.is_tree_completed() else "[ ]"
+        connector = "└── " if is_last else "├── "
+
+        # Annotations
+        extras = []
+        if node.children:
+            completed_children = sum(1 for c in node.children if c.is_tree_completed())
+            total_children = len(node.children)
+            if completed_children == total_children:
+                extras.append("all children complete")
+            else:
+                extras.append(f"{completed_children}/{total_children} complete")
+
+        if node.blocked_by:
+            extras.append(f"blocked-by: {', '.join(node.blocked_by)}")
+
+        extra_str = f" ({'; '.join(extras)})" if extras else ""
+        parent_tag = f" [{', '.join(node.parent_ids)}]" if node.parent_ids else ""
+
+        if prefix == "" and node.kind == "REQ":
+            # Top level root
+            print(f"{box} {node.id}: {node.title}{extra_str}")
+            child_prefix = "  "
+        else:
+            print(f"{prefix}{connector}{box} {node.id}{parent_tag}: {node.title}{extra_str}")
+            child_prefix = prefix + ("    " if is_last else "│   ")
+
+        for idx, child in enumerate(node.children):
+            c_last = idx == len(node.children) - 1
+            self._render_subtree(child, child_prefix, c_last)
+
+    def cmd_trace(self, target_id: str):
+        tid = normalize_id(target_id)
+        node = self.nodes.get(tid)
+        if not node:
+            print(f"Error: Node {target_id} not found", file=sys.stderr)
+            sys.exit(1)
+
+        print(f"Trace for {node.id} ({node.kind}):")
+        if node.file_path and node.line_number:
+            print(f"  Location:       {node.file_path.name}:{node.line_number}")
+        print(f"  Title:          {node.title}")
+        print(f"  Status in file: {'[x] (checked)' if node.checked else '[ ] (open)'}")
+        print(f"  Tree complete:  {'True' if node.is_tree_completed() else 'False'}")
+        if node.verify_cmd:
+            print(f"  Verify Command: {node.verify_cmd}")
+        tests = self.detail_value(node, TESTS_DETAIL_RE)
+        if tests:
+            print(f"  Tests:          {tests}")
+        if node.blocked_by:
+            print(f"  Blocked by:     {', '.join(node.blocked_by)}")
+
+        parents_str = ", ".join(f"{p.id} ({p.kind} @ {p.file_path.name}:{p.line_number})" for p in node.parents) or "None (Root)"
+        print(f"  Parents:        {parents_str}")
+
+        children_str = ", ".join(f"{c.id} ({c.kind} @ {c.file_path.name}:{c.line_number})" for c in node.children) or "None (Leaf)"
+        print(f"  Children:       {children_str}")
+
+    def architecture_sections(self) -> Set[str]:
+        path = self.root / "ARCHITECTURE.md"
+        if not path.is_file():
+            return set()
+        sections = set()
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = re.match(r"^##[ \t]+(.+?)\s*$", line)
+            if match:
+                sections.add(match.group(1).strip())
+        return sections
+
+    def cmd_verify_links(self):
+        errors = 0
+        warnings: List[str] = []
+
+        seen: Dict[str, Node] = {}
+        for node in self.reqs + self.decs + self.specs + self.tasks:
+            if node.id in seen:
+                print(
+                    f"Duplicate ID: {node.id} in {node.file_path.name}:{node.line_number} "
+                    f"and {seen[node.id].file_path.name}:{seen[node.id].line_number}",
+                    file=sys.stderr,
+                )
+                errors += 1
+            else:
+                seen[node.id] = node
+            if node.kind in ("REQ", "SPEC", "TASK") and not node.verify_cmd:
+                print(
+                    f"Missing Verify: {node.id} ({node.file_path.name}:{node.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+
+        errors += self.validate_retirement_scope()
+        sections = self.architecture_sections()
+
+        for node in self.reqs + self.decs + self.specs + self.tasks:
+            if not node.section:
+                print(
+                    f"Missing slice section: {node.id} ({node.file_path.name}:{node.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+            elif sections and node.section not in sections:
+                print(
+                    f"Unknown slice section: {node.id} cites {node.section!r} "
+                    f"({node.file_path.name}:{node.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+
+        for dec in self.decs:
+            if dec.parent_ids:
+                print(
+                    f"Decision has parent: {dec.id} ({dec.file_path.name}:{dec.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+
+        for req in self.reqs:
+            parents = [pid for pid in req.parent_ids if pid in self.nodes and self.nodes[pid].kind == "DEC"]
+            if len(req.parent_ids) != 1 or len(parents) != 1:
+                print(
+                    f"Invalid requirement parent: {req.id} needs one DEC parent "
+                    f"({req.file_path.name}:{req.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+
+        spec_tests: Dict[str, Set[str]] = {}
+        for spec in self.specs:
+            parents = [pid for pid in spec.parent_ids if pid in self.nodes and self.nodes[pid].kind == "REQ"]
+            if len(spec.parent_ids) != 1 or len(parents) != 1:
+                print(
+                    f"Invalid spec parent: {spec.id} needs one REQ parent "
+                    f"({spec.file_path.name}:{spec.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+            tests = self.detail_value(spec, TESTS_DETAIL_RE)
+            if not tests:
+                print(
+                    f"Missing Tests: {spec.id} ({spec.file_path.name}:{spec.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+                continue
+            test_path = self.root.parent / tests
+            if not test_path.is_file():
+                print(
+                    f"Missing test file: {tests} for {spec.id} "
+                    f"({spec.file_path.name}:{spec.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+                continue
+            spec_tests[spec.id] = self.case_ids_in_text(test_path.read_text(encoding="utf-8"))
+
+        seen_cases: Dict[str, str] = {}
+        for task in self.tasks:
+            parents = [pid for pid in task.parent_ids if pid in self.nodes and self.nodes[pid].kind == "SPEC"]
+            if len(task.parent_ids) != 1 or len(parents) != 1:
+                print(
+                    f"Invalid task parent: {task.id} needs one SPEC parent "
+                    f"({task.file_path.name}:{task.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+            if not task.case_ids:
+                print(
+                    f"Missing Cases: {task.id} ({task.file_path.name}:{task.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+            for case_id in task.case_ids:
+                if not re.fullmatch(r"C\d+", case_id):
+                    print(
+                        f"Invalid case ID: {case_id} for {task.id} "
+                        f"({task.file_path.name}:{task.line_number})",
+                        file=sys.stderr,
+                    )
+                    errors += 1
+                    continue
+                spec_id = parents[0] if parents else ""
+                if spec_id and case_id not in spec_tests.get(spec_id, set()):
+                    print(
+                        f"Case absent from test file: {case_id} for {task.id} "
+                        f"({task.file_path.name}:{task.line_number})",
+                        file=sys.stderr,
+                    )
+                    errors += 1
+                if case_id in seen_cases and seen_cases[case_id] != task.id:
+                    print(
+                        f"Duplicate case owner: {case_id} in {task.id} and {seen_cases[case_id]}",
+                        file=sys.stderr,
+                    )
+                    errors += 1
+                seen_cases[case_id] = task.id
+            for blocker in task.blocked_by:
+                node = self.nodes.get(blocker)
+                if not node or node.kind != "TASK":
+                    print(
+                        f"Invalid blocker: {blocker} for {task.id} "
+                        f"({task.file_path.name}:{task.line_number})",
+                        file=sys.stderr,
+                    )
+                    errors += 1
+            detail_path = (Path("tasks") / f"{task.id}.md").as_posix()
+            if not (self.root / detail_path).is_file():
+                print(f"Missing Task Detail file: {detail_path} for {task.id}", file=sys.stderr)
+                errors += 1
+            if self.detail_value(task, DETAIL_DETAIL_RE) or self.detail_value(task, CASES_DETAIL_RE):
+                print(
+                    f"Detail and Cases belong in the task header: {task.id} "
+                    f"({task.file_path.name}:{task.line_number})",
+                    file=sys.stderr,
+                )
+                errors += 1
+
+        for node in self.nodes.values():
+            if node.children:
+                if node.checked and not node.is_tree_completed():
+                    open_children = [c.id for c in node.children if not c.is_tree_completed()]
+                    print(
+                        f"Invariant violation: Parent {node.kind} {node.id} is marked complete [x] "
+                        f"but child items are incomplete: {', '.join(open_children)}",
+                        file=sys.stderr,
+                    )
+                    errors += 1
+
+        adjacency = {t.id: [b for b in t.blocked_by if b in self.nodes] for t in self.tasks}
+        state: Dict[str, int] = {}
+
+        def visit(node_id: str, stack: List[str]) -> bool:
+            mark = state.get(node_id, 0)
+            if mark == 1:
+                if node_id in stack:
+                    cycle = stack[stack.index(node_id) :] + [node_id]
+                    print(f"Dependency cycle: {' -> '.join(cycle)}", file=sys.stderr)
+                    return True
+                return False
+            if mark == 2:
+                return False
+            state[node_id] = 1
+            for blocker in adjacency.get(node_id, []):
+                if visit(blocker, stack + [node_id]):
+                    return True
+            state[node_id] = 2
+            return False
+
+        for task in self.tasks:
+            if visit(task.id, []):
+                errors += 1
+
+        detail_dir = self.root / "tasks"
+        if detail_dir.is_dir():
+            active_details = {f"tasks/{t.id}.md" for t in self.tasks}
+            with os.scandir(detail_dir) as entries:
+                names = sorted(e.name for e in entries if e.is_file() and e.name.endswith(".md"))
+            for name in names:
+                if name == "quick.md":
+                    continue
+                rel = f"tasks/{name}"
+                if rel not in active_details:
+                    warnings.append(f"orphan detail file: {rel}")
+
+        if warnings:
+            print("Warnings:", file=sys.stderr)
+            for warning in warnings:
+                print(f"  - {warning}", file=sys.stderr)
+
+        if errors:
+            print(f"verify-links failed with {errors} errors.", file=sys.stderr)
+            sys.exit(1)
+
+        print("OK")
+
+def print_usage():
+    print(
+        "Usage: iridescent-artifacts <status|active-decisions|unconverted-reqs|unconverted-decs|unconverted-specs|undrawn-specs|next-cases|next-task|frontier|next-id <r|d|s|t>|tree [ID]|trace <ID>|check|verify-links>",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+
+def main():
+    if len(sys.argv) < 2:
+        print_usage()
+
+    cmd = sys.argv[1].lower()
+    repo = ArtifactsRepository()
+
+    if cmd == "status":
+        repo.cmd_status()
+    elif cmd == "active-decisions":
+        repo.cmd_active_decisions()
+    elif cmd == "unconverted-reqs":
+        repo.cmd_unconverted_reqs()
+    elif cmd == "unconverted-decs":
+        repo.cmd_unconverted_decs()
+    elif cmd == "unconverted-specs":
+        repo.cmd_unconverted_specs()
+    elif cmd == "undrawn-specs":
+        repo.cmd_undrawn_specs()
+    elif cmd == "next-cases":
+        repo.cmd_next_cases()
+    elif cmd == "next-task":
+        repo.cmd_next_task()
+    elif cmd == "frontier":
+        repo.cmd_frontier()
+    elif cmd == "next-id":
+        if len(sys.argv) < 3:
+            print("Error: next-id requires r|req, d|dec, s|spec, or t|task", file=sys.stderr)
+            sys.exit(2)
+        repo.cmd_next_id(sys.argv[2])
+    elif cmd == "tree":
+        target = sys.argv[2] if len(sys.argv) > 2 else None
+        repo.cmd_tree(target)
+    elif cmd == "trace":
+        if len(sys.argv) < 3:
+            print("Error: ID required for trace subcommand", file=sys.stderr)
+            sys.exit(2)
+        repo.cmd_trace(sys.argv[2])
+    elif cmd in ("check", "verify-links"):
+        repo.cmd_verify_links()
+    else:
+        print(f"Unknown subcommand: {cmd}", file=sys.stderr)
+        print_usage()
+
+
+if __name__ == "__main__":
+    main()

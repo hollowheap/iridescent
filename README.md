@@ -1,32 +1,36 @@
 # iridescent
 
-Skill suite, RDST trace CLI (`scripts/iridescent-artifacts`), and workspace artifact rules for the RDST delivery loop: `brainstorm` → `design` → `specify` → `plan` → `implement` → `review` → `update`.
+Skill suite and RDST trace CLI for the delivery loop: `brainstorm` → `design` → `specify` → `draw` → `plan` → `implement` → `review` → `update`.
 
 ## Skills
 
-- `init` — bootstrap `AGENTS.md`, `.gitignore`, `.artifacts/CONTEXT.md`, and `.artifacts/ARCHITECTURE.md`.
-- `brainstorm` — explore 2–3 contrasting archetypes; bound questions to destination, scope, and hard constraints.
-- `design` — define slice requirements (`Rxx`), accepted decisions (`Dxx`), and `.artifacts/ARCHITECTURE.md`; bound questions to architectural and design forks.
-- `specify` — derive public boundary invariants (`Sxx`) from accepted `Rxx`/`Dxx`; probe only ambiguous seam edge cases.
-- `plan` — split `Sxx` into atomic verified tasks (`Txx`); ask questions only when task granularity, ordering, or verify commands are ambiguous.
-- `implement` — execute the next ready task test-first with `references/tdd.md` and `references/principles.md`; never interrogate with questions during coding (escalate missing contracts or forks strictly to the `specify` or `design` skill).
-- `review` — audit diffs, slices, seams, and robustness using `references/simplicity.md` and triggered review lenses (`architecture`, `api`, `data`, `security`, `performance`, `tests`, `ui`).
-- `update` — reconcile `AGENTS.md` and `.artifacts/` with workspace reality and settle completed parent checkboxes.
-- `how-to-iridescent` — inspect workspace state, explain the lifecycle loop, and recommend the next skill.
-- `doctor-iridescent` — diagnose and repair workspace layout, migrate legacy `artifacts/` paths to `.artifacts/`, and verify trace links.
-
-UI rendered checks in `review` delegate to the sibling `opal` skill when installed and degrade to `ui: skipped` otherwise.
+- `init` — bootstrap `AGENTS.md`, `CONTEXT.md`, and `ARCHITECTURE.md`; the CLI maintains `.artifacts/.gitignore`.
+- `brainstorm` — record destination, verified facts, and options from supplied context.
+- `design` — turn options into accepted `Dxx` decisions, `Rxx` requirements, and architecture.
+- `specify` — derive public-boundary invariants (`Sxx`) from accepted `Rxx`.
+- `draw` — write red test cases for one `Sxx` in the repository test suite.
+- `plan` — split `Sxx` cases into atomic verified tasks (`Txx`).
+- `implement` — run drawn tests, write production code, self-audit the diff, and record a completion receipt.
+- `review` — audit changed hunks with severity-ordered, read-only findings.
+- `update` — reconcile live snapshots from decisions, receipts, and verified code.
+- `how-to-iridescent` — explain the lifecycle and current workspace state.
+- `doctor-iridescent` — repair malformed workspace structure against generated templates.
 
 ## Artifacts CLI (`scripts/iridescent-artifacts`)
 
-Python 3 standard-library CLI bundled into every scripted skill (`scripts/iridescent-artifacts`) and exposed as the `iridescent-artifacts` Nix package:
+Python 3 standard-library CLI with a skill-local wrapper and CLI copy under `<skill-dir>/scripts/`:
 
 ```sh
 scripts/iridescent-artifacts status
-scripts/iridescent-artifacts unconverted-reqs | unconverted-decs | unconverted-specs
+scripts/iridescent-artifacts active-decisions
+scripts/iridescent-artifacts undrawn-specs
+scripts/iridescent-artifacts next-task
+scripts/iridescent-artifacts frontier
 scripts/iridescent-artifacts next-id <r|d|s|t>
-scripts/iridescent-artifacts next-task | frontier
-scripts/iridescent-artifacts check | verify-links | sync | tree [ID] | trace <ID>
+scripts/iridescent-artifacts tree [ID]
+scripts/iridescent-artifacts trace <ID>
+scripts/iridescent-artifacts check
+scripts/iridescent-artifacts verify-links
 ```
 
 ## Install
@@ -37,10 +41,10 @@ scripts/iridescent-artifacts check | verify-links | sync | tree [ID] | trace <ID
 npx skills add hollowheap/iridescent
 ```
 
-Each `skills/<name>/` directory is self-contained (no cross-skill `../` paths) and bundles `scripts/iridescent-artifacts` where needed. Artifact placement and slicing rules live in the relevant skill reference files.
+Each `skills/<name>/` directory is self-contained. Generated templates, contracts, and CLI copies are committed for portable installs. Run `scripts/sync-skill-assets --check` to verify generated files against `assets/`.
 
 ### Nix Flake & Home Manager (`flake.nix`)
 
-- `homeManagerModules.default` (`programs.iridescent.enable = true`): installs `iridescent-artifacts` into `home.packages` and installs `skills/` into enabled harnesses (`claude-code`, `opencode`, `codex`, `crush`, `github-copilot-cli`, `antigravity-cli`, `kiro-cli`, `pi-coding-agent`).
-- `packages.<system>.iridescent-artifacts` (and `default`): standalone `iridescent-artifacts` CLI derivation (with `artifacts` and `artifacts.sh` aliases).
-- `overlays.default`: overlays `pkgs.iridescent-artifacts`.
+- `homeManagerModules.default` installs the CLI and skills into enabled harnesses.
+- `packages.<system>.iridescent-artifacts` provides the standalone CLI.
+- `overlays.default` overlays `pkgs.iridescent-artifacts`.

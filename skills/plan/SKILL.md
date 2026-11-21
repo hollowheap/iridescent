@@ -1,33 +1,35 @@
 ---
 name: plan
-description: Turn specs into atomic verified tasks.
+description: Turn live specs into atomic verified tasks.
 disable-model-invocation: true
 ---
 
 ## Scope
 
 - Covers: converting accepted specs into atomic, verified tasks in `.artifacts/TASKS.md`.
-- Excludes: specs, design decisions, implementation, and review.
+- Excludes: specs, design decisions, clarification, implementation, review, and archived tasks.
 
 ## Workflow
 
-1. Run `scripts/iridescent-artifacts undrawn-specs`; if undrawn specs remain, return to the `draw` skill; then run `unconverted-specs` and `unconverted-decs` as needed.
-2. Derive `Txx` from `Sxx` and its ledger. If a spec has no contract, ledger, architecture section, or verify command, stop.
-3. Route any missing contract or design fork back to the `specify` or `design` skill; use the host's structured question tool only when task splitting, dependency ordering, or verification command choice is genuinely ambiguous, never ask unresolved questions as plain chat text, give 2-4 concrete options, one recommended answer, and a one-line consequence per answer, and block until answered.
-4. Run `scripts/iridescent-artifacts next-id t` to obtain sequential `Txx` IDs.
-5. Append atomic vertical tasks to `.artifacts/TASKS.md` under the slice H3 heading with `Detail: tasks/<Txx>.md` and `Cases: Cxx` lines (see `references/examples.md` only if the format is unclear); keep the task record minimal.
-6. Run `scripts/iridescent-artifacts check`, `verify-links`, and `frontier`.
+1. Run `<skill-dir>/scripts/iridescent-artifacts undrawn-specs`; return to `draw` if any remain, then run `unconverted-specs` and `unconverted-decs`.
+2. Derive `Txx` from `Sxx` and its test file; stop if a contract, test file, architecture section, or verify command is missing.
+3. Resolve facts from the repository directly; route ambiguous contracts to `specify`, `design`, or `draw`.
+4. Run `<skill-dir>/scripts/iridescent-artifacts next-id t` to obtain sequential `Txx` IDs.
+5. Append tasks and details with templates from `references/TASKS.md` and `references/task-detail.md`, respectively.
+6. Run `<skill-dir>/scripts/iridescent-artifacts check`, `verify-links`, and `frontier`.
 
 ## Rules
 
-- Every task references its parent `Sxx`. Include a trailing `[Txx, Tyy]` blocker bracket only when blocked; omit it when unblocked.
-- Include strictly `outcome`, `verify`, `files`, `notes`, `risk`, `detail`, and `cases`; never add requirements, design, spec, or review breakdowns.
-- The detail fields are contract: keep `detail` before `cases` and preserve exact field names.
-- Require a concrete verifiable outcome and command from the start; write zero stubs.
-- Active `Txx` records must reference live `Sxx` IDs; never plan against superseded IDs.
-- Group cases by seam, module, and verify command; one `Txx` may cover many cases when they share all three.
-- Split a task that satisfies unrelated specs, owners, or rollback units.
-- Write each `Txx`, its detail file, its `Cases:` links, and its blockers in the same invocation.
-- Ask questions strictly when task granularity, dependency ordering, or verification command selection is ambiguous; use the host's structured question tool with 2-4 options, a recommendation, and answer consequences, and never re-litigate accepted specs or decisions.
-- Edit only `.artifacts/TASKS.md`; never mark parent specs or decisions complete (conversion is derived strictly from child references).
-- Verify: `scripts/iridescent-artifacts check` and `verify-links` output OK, undrawn-specs output is `NONE`, and `frontier` lists ready tasks.
+- Write mode: snapshot; rewrite in place with no retired IDs or markers.
+- Copy `Cxx` IDs from tests into task headers.
+- Treat `TASKS.md` as the single verification source.
+- Sharpen every `Verify` field to a non-human executable command from the start; write zero stubs.
+- Reference live `Sxx` IDs only; never plan against archived IDs.
+- Split refactor work from feature work.
+- Write each task, its detail file, its cases, and its blockers in the same invocation.
+- Never grill during planning; route clarification to `specify`, `design`, or `draw`.
+- Edit strictly `.artifacts/TASKS.md` and `.artifacts/tasks/<Txx>.md`; never mark parent specs or decisions complete.
+
+## Verify
+
+- Verify: `<skill-dir>/scripts/iridescent-artifacts check` and `verify-links` output OK, `undrawn-specs` outputs `NONE`, and `frontier` lists ready tasks.

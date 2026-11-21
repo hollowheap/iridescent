@@ -11,17 +11,19 @@ disable-model-invocation: true
 
 ## Workflow
 
-1. Inspect workspace for `AGENTS.md` and `.artifacts/CONTEXT.md`. If `AGENTS.md` exists, stop immediately.
-2. Inspect workspace manifests, source entrypoints, directory seams, and test runners directly; delegate repo recon to Scout and external research to Researcher only when the calling agent permits delegation.
+1. Inspect workspace for `AGENTS.md` and `.artifacts/CONTEXT.md`; stop immediately if `AGENTS.md` exists.
+2. Inspect manifests, entrypoints, seams, and test runners directly.
 3. Run build, check, full-suite, and targeted single-test commands in the shell to confirm they pass.
-4. Ensure `.gitignore` includes `.artifacts/`.
-5. Write `AGENTS.md`, `.artifacts/CONTEXT.md`, and `.artifacts/ARCHITECTURE.md` using `references/template.md`.
+4. Ensure the CLI initialized `.artifacts/.gitignore`.
+5. Write `AGENTS.md`, `.artifacts/CONTEXT.md`, and `.artifacts/ARCHITECTURE.md` with templates from `references/AGENTS.md`, `references/CONTEXT.md`, and `references/ARCHITECTURE.md`, respectively.
 
 ## Rules
 
-- Follow the section structure and `<= 60` line budgets strictly for `AGENTS.md` and `.artifacts/CONTEXT.md` in `references/template.md`.
-- Keep in `AGENTS.md` strictly high-signal guidance: verified build/test/single-test commands, non-obvious repo invariants, and all global "Never ..." safety rules (never move safety rules into skills, never include `.artifacts/` pointers, and never write test pass counts in `AGENTS.md`).
-- Keep `.artifacts/CONTEXT.md` limited strictly to `## Stack & Entrypoints` and `## Module Seams` (document strictly high-level seams and entrypoints, never internal functions or `## Commands`).
-- Put multi-step task runbooks into a project skill and keep one pointer line in `AGENTS.md`.
-- Record only commands you executed and observed pass in the shell.
-- Verify: `AGENTS.md` and `.artifacts/CONTEXT.md` are under 60 lines and match `references/template.md`; `.gitignore` includes `.artifacts/`; `.artifacts/ARCHITECTURE.md` defines all required sections.
+- Use the generated templates as the authority for every file created here.
+- Keep `AGENTS.md` under 500 tokens.
+- Record only commands and facts observed in the shell.
+- Put multi-step task runbooks into a project skill.
+
+## Verify
+
+- Verify: all three files match their templates and `.artifacts/.gitignore` exists.

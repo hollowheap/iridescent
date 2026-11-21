@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SELF_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLI="$SELF_DIR/iridescent-artifacts-cli"
+if [ -f "$CLI" ]; then
+  exec python3 "$CLI" "$@"
+elif command -v iridescent-artifacts >/dev/null 2>&1; then
+  exec iridescent-artifacts "$@"
+else
+  echo "Error: iridescent-artifacts CLI missing from $SELF_DIR." >&2
+  exit 1
+fi

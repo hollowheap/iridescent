@@ -1,30 +1,27 @@
 # TDD Rules
 
-Use for non-trivial behavior, bug fixes, and any change where a failing check can be written at the seam.
+Use for non-trivial production changes with an already-drawn failing check.
 
-## Red -> green
+## Red → green
 
-1. Run the assigned already-drawn failing test or reproducible check; if absent, route to the `draw` skill.
-2. Run it and confirm it fails for the expected reason.
-3. Implement the minimum production change.
+1. Run the assigned drawn test or reproducible check; if absent, route to `draw`.
+2. Confirm the failure is the expected one.
+3. Implement the minimum clean production change.
 4. Rerun the same check and confirm green.
 5. Run the broader suite and the task verify.
 
-## Bug fixes
+## Reproduction
 
-Reproduce the reported failure with a failing test or command before editing. Fix the root cause, then rerun the same reproduction as proof. If no test seam exists, record the reproduction command and add a regression check where possible.
+Reproduce the reported failure with a drawn test or command before editing production code. If no test seam exists, record the reproduction command and route the regression case to `draw`.
 
 ## Config and eval work
 
-Use the failing `nix eval`, `nix build`, or task verification command directly as the red check when a unit test is not meaningful; never invent a test that merely restates the generated config.
+Use the failing `nix eval`, `nix build`, or task verification command directly as the red check when a unit test is not meaningful.
 
-## Test quality
+## Mutation check
 
-- Assert observable behavior strictly at the public seam with one meaningful assertion per behavior; never mirror implementation steps.
-- Keep tests deterministic and independent of host state unless the task is explicitly integration-level.
-- Cover every assigned ledger case, including failure and cross-seam paths; one case is required per observable behavior.
-- Trivial one-liners may use the task verify directly.
+For high-impact behavioral invariants, temporarily invert one production condition, rerun the task verify to prove a test fails, and restore the file immediately before review handoff.
 
 ## Exceptions
 
-Skip test-first strictly when no failing check can be expressed beforehand; record the reason in task notes and always run the task verification command (never use this exception to avoid verification).
+Skip test-first strictly when no failing check can be expressed beforehand. Record the reason in task notes and always run the task verification command.
