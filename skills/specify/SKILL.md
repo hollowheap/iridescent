@@ -18,7 +18,7 @@ disable-model-invocation: true
    - Give 2-4 concrete options, one recommended answer, and a one-line consequence per answer.
    - Block until answered; return to `design` if an answer changes design.
 4. Run `<skill-dir>/scripts/iridescent-artifacts next-id s` to obtain sequential `Sxx` IDs.
-5. Append public invariants with template from `references/SPECS.md` under the owning module-seam H3.
+5. Append public invariants with template from `references/SPECS.md` under the matching architecture slice H2.
 6. Run `<skill-dir>/scripts/iridescent-artifacts check` to verify trace links and graph shape.
 
 ## Rules

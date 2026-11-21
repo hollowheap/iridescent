@@ -21,7 +21,7 @@ disable-model-invocation: true
 ## Rules
 
 - Write mode: snapshot; rewrite in place with no retired IDs or markers.
-- Use stable `Cxx` IDs in test names.
+- Mark cases with `# Cxx: <behavior>` and `# Red: <command>` in the test file.
 - Process one `Sxx` at a time; write its tests and `Tests:` link atomically.
 - Assert observable behavior at the public seam; never mirror internal calls or add production test hooks.
 - Cover happy, boundary, failure, provider, consumer, and cross-seam paths when the seam requires them.

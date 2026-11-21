@@ -1,7 +1,7 @@
 # Doctor Checks
 
 1. **Wrong format**: Repair malformed existing `AGENTS.md` and `.artifacts/` root records against templates.
-2. **Wrong locations**: Repair misplaced test links, task details, and retired records.
+2. **Wrong locations**: Repair malformed test links and task detail paths.
 3. **Path pointers**: Repair broken pointers to current workspace paths using the templates.
 4. **Gitignore coverage**: Confirm the CLI-created `.artifacts/.gitignore` is present.
 5. **Instruction budgets**: Ensure `AGENTS.md` stays under 500 tokens and `.artifacts/CONTEXT.md` matches its template.

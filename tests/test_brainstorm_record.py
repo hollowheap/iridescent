@@ -1,4 +1,5 @@
-"""Cases: C0901"""
+# C0901: C0901 behavior
+# Red: python3 -B -m unittest discover -s tests
 
 from pathlib import Path
 import unittest

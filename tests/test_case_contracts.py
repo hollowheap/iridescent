@@ -1,4 +1,15 @@
-"""Cases: C0101, C0201, C0301, C0401, C0501, C0601"""
+# C0101: C0101 behavior
+# Red: python3 -B -m unittest discover -s tests
+# C0201: C0201 behavior
+# Red: python3 -B -m unittest discover -s tests
+# C0301: C0301 behavior
+# Red: python3 -B -m unittest discover -s tests
+# C0401: C0401 behavior
+# Red: python3 -B -m unittest discover -s tests
+# C0501: C0501 behavior
+# Red: python3 -B -m unittest discover -s tests
+# C0601: C0601 behavior
+# Red: python3 -B -m unittest discover -s tests
 
 from pathlib import Path
 import unittest

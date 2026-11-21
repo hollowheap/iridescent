@@ -25,6 +25,7 @@ disable-model-invocation: true
 - Keep live indices live and archived records archived.
 - Run CLI `archive` only after replacement evidence is verified.
 - Preserve superseded history in archive entries.
+- Rewrite active references before archive; never leave retired IDs in live records.
 - Route unresolved design forks to `design` and unresolved seams to `specify` or `draw`.
 
 ## Verify

@@ -13,7 +13,7 @@
 - Run `verify-links` before continuing workspace changes.
 - Follow `references/slicing.md` for slice boundaries, cardinality, coupling, and target-state requests.
 
-- Retired records live in `.artifacts/archive/`: `REQUIREMENTS.md`, `SPECS.md`, `DECISIONS.md`, `tests/<Sxx>.md`, and `tasks/<Txx>.md`.
+- Retired records live in `.artifacts/archive/`: `REQUIREMENTS.md`, `SPECS.md`, `TASKS.md`, `tests/<Sxx>.md`, and `tasks/<Txx>.md`.
 - Retired records keep historical IDs; active roots keep live records only.
 - `DECISIONS.md` is the only live file with supersession fields.
 - Active records never reference archived IDs as parents.

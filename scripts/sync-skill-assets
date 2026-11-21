@@ -30,7 +30,6 @@ DOCTOR_TEMPLATES = (
     "REVIEWS.md",
     "review-record.md",
     "task-detail.md",
-    "archive-DECISIONS.md",
     "archive-SPECS.md",
     "archive-task-detail.md",
 )
@@ -46,7 +45,6 @@ HEADING_RULES = {
     "templates/REVIEWS.md": ("# Persistent Reviews",),
     "templates/review-record.md": ("# Review: ", "## Scope", "## Findings", "## Verification"),
     "templates/task-detail.md": ("# Task Detail: ", "## Steps", "## Notes", "## Risk"),
-    "templates/archive-DECISIONS.md": ("# Archived Decisions", "## "),
     "templates/archive-SPECS.md": ("# Archived Specs", "## "),
     "templates/archive-task-detail.md": ("# Archived Task Detail: ",),
     "contracts/artifacts.md": ("# Artifact Placement",),
@@ -89,7 +87,6 @@ def outputs() -> dict[str, str]:
         "REVIEWS.md",
         "review-record.md",
         "task-detail.md",
-        "archive-DECISIONS.md",
         "archive-SPECS.md",
         "archive-task-detail.md",
     )

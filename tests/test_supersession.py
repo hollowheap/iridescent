@@ -1,4 +1,5 @@
-"""Cases: C0801"""
+# C0801: C0801 behavior
+# Red: python3 -B -m unittest discover -s tests
 
 from pathlib import Path
 import unittest
@@ -66,9 +67,13 @@ def write_graph(artifacts, *, old_tree: bool = False):
 
     tests = artifacts.parent / "tests"
     tests.mkdir(exist_ok=True)
-    (tests / "test_s03.py").write_text("# C02\n", encoding="utf-8")
+    (tests / "test_s03.py").write_text(
+        "# C02: case\n# Red: python3 -B -m unittest\n", encoding="utf-8"
+    )
     if old_tree:
-        (tests / "test_s01.py").write_text("# C0101\n", encoding="utf-8")
+        (tests / "test_s01.py").write_text(
+            "# C0101: case\n# Red: python3 -B -m unittest\n", encoding="utf-8"
+        )
 
     tasks = artifacts / "tasks"
     tasks.mkdir(exist_ok=True)
@@ -110,10 +115,14 @@ class ArchiveRetirementTests(unittest.TestCase):
     def test_archive_moves_superseded_subtree(self):
         with workspace() as (root, artifacts):
             write_graph(artifacts, old_tree=True)
+            decisions_before = (artifacts / "DECISIONS.md").read_bytes()
             result = run_cli("archive", cwd=root)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("Archived REQ R01", result.stdout)
             self.assertIn("Archived TASK T01", result.stdout)
+            self.assertEqual(
+                (artifacts / "DECISIONS.md").read_bytes(), decisions_before
+            )
 
             self.assertIn("R01", (artifacts / "archive" / "REQUIREMENTS.md").read_text(encoding="utf-8"))
             self.assertIn("S01", (artifacts / "archive" / "SPECS.md").read_text(encoding="utf-8"))

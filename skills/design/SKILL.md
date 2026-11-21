@@ -12,7 +12,7 @@ disable-model-invocation: true
 ## Workflow
 
 1. Run `<skill-dir>/scripts/iridescent-artifacts status` and `active-decisions`; read `.artifacts/REQUIREMENTS.md`, `.artifacts/ARCHITECTURE.md`, and `.artifacts/BRAINSTORM.md`.
-2. Convert Options and Destination into module-seam H3 groups using `references/REQUIREMENTS.md` and `references/slicing.md`.
+2. Convert Options and Destination into architecture slice H2 groups using `references/REQUIREMENTS.md` and `references/slicing.md`.
 3. Resolve repository and tool facts directly, then grill unresolved design forks with the host's structured question tool:
    - Never ask unresolved questions as plain chat text.
    - Ask only independent forks in one call with 2-4 concrete options, one recommended answer, and a one-line consequence per answer.
@@ -25,7 +25,7 @@ disable-model-invocation: true
 - Write mode: append-only for `Dxx`; history lives in `DECISIONS.md`.
 - Record rationale for semantic calls in `DECISIONS.md`.
 - Reject implementation names in requirements.
-- Requirement H3 headings may follow architecture slice examples, but are not limited to them.
+- Requirement H2 headings use architecture slice names.
 - Resolve facts from the repository before asking; ask the user only for unresolved design choices.
 - Use the host's structured question tool for every blocking design fork.
 - Give 2-4 concrete options, one recommended answer, and a one-line consequence per answer.

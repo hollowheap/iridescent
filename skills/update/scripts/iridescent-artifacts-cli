@@ -23,6 +23,9 @@ BRACKET_RE = re.compile(
 )
 CASE_BRACKET_RE = re.compile(r"\[((?:C\d+)(?:\s*,\s*C\d+)*)\]"
 )
+CASE_MARKER_RE = re.compile(r"^[ \t]*#[ \t]+(C\d+)\b")
+CASE_RED_RE = re.compile(r"^[ \t]*#[ \t]+Red:[ \t]*(.+)$")
+ARCHIVED_CASE_RE = re.compile(r"^[ \t]*-[ \t]*(C\d+)\b")
 BLOCKED_TRAILING_RE = re.compile(
     r"\[((?:TASK-|T)\d+(?:\s*,\s*(?:TASK-|T)\d+)*)\]\s*(?=:|$)", re.IGNORECASE
 )
@@ -146,19 +149,50 @@ class ArtifactsRepository:
         for dec in self.decs:
             raw = self.detail_value(dec, SUPERSEDES_DETAIL_RE)
             if raw:
-                superseded.update(t for t in re.split(r"[,\s]+", raw) if t)
+                superseded.update(
+                    normalize_id(t) for t in re.split(r"[,\s]+", raw) if t
+                )
         return superseded
 
     def archive_ids(self, prefix: str, file_name: str) -> Set[str]:
         archive_file = self.root / "archive" / file_name
         if not archive_file.is_file():
             return set()
-        pattern = re.compile(rf"(?m)^- \[[ xX]\] ({prefix}\d+)\b")
-        return set(pattern.findall(archive_file.read_text(encoding="utf-8")))
+        pattern = re.compile(
+            r"(?m)^[ \t]*-[ \t]*\[[ xX]\][ \t]+"
+            r"((?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+)\b"
+        )
+        found = {
+            normalize_id(match.group(1))
+            for match in pattern.finditer(archive_file.read_text(encoding="utf-8"))
+        }
+        return {item for item in found if item.startswith(prefix)}
 
     @staticmethod
-    def case_ids_in_text(text: str) -> Set[str]:
-        return set(re.findall(r"\bC\d+\b", text))
+    def test_case_records(text: str) -> Dict[str, bool]:
+        records: Dict[str, bool] = {}
+        current = ""
+        for line in text.splitlines():
+            marker = CASE_MARKER_RE.match(line)
+            if marker:
+                current = marker.group(1)
+                records[current] = False
+                continue
+            if current and CASE_RED_RE.match(line):
+                records[current] = True
+        return records
+
+    def archived_case_ids(self) -> Set[str]:
+        cases: Set[str] = set()
+        archive_tests = self.root / "archive" / "tests"
+        if not archive_tests.is_dir():
+            return cases
+        for path in archive_tests.glob("*.md"):
+            for line in path.read_text(encoding="utf-8").splitlines():
+                match = ARCHIVED_CASE_RE.match(line)
+                if match:
+                    cases.add(match.group(1))
+        return cases
 
     def validate_retirement_scope(self) -> int:
         errors = 0
@@ -173,6 +207,7 @@ class ArtifactsRepository:
         for dec in self.decs:
             raw = self.detail_value(dec, SUPERSEDES_DETAIL_RE)
             for target in re.split(r"[,\s]+", raw) if raw else []:
+                target = normalize_id(target) if target else target
                 if target and target not in decision_ids:
                     print(f"Unresolved Supersedes: {target} for {dec.id}", file=sys.stderr)
                     errors += 1
@@ -342,7 +377,11 @@ class ArtifactsRepository:
         context_status = "present" if context_file.is_file() and context_file.stat().st_size > 0 else "none"
 
         open_reqs = [r for r in self.reqs if not (r.checked and r.is_tree_completed())]
-        open_decs = [d for d in self.decs if not (d.checked and d.is_tree_completed())]
+        retired_decs = self.superseded_ids()
+        open_decs = [
+            d for d in self.decs
+            if d.id not in retired_decs and not (d.checked and d.is_tree_completed())
+        ]
         open_specs = [s for s in self.specs if not (s.checked and s.is_tree_completed())]
         open_tasks = [t for t in self.tasks if not (t.checked and t.is_tree_completed())]
 
@@ -707,8 +746,17 @@ class ArtifactsRepository:
                 )
                 errors += 1
                 continue
-            spec_tests[spec.id] = self.case_ids_in_text(test_path.read_text(encoding="utf-8"))
+            records = self.test_case_records(test_path.read_text(encoding="utf-8"))
+            missing_red = sorted(case_id for case_id, has_red in records.items() if not has_red)
+            if missing_red:
+                print(
+                    f"Missing Red marker: {', '.join(missing_red)} in {tests}",
+                    file=sys.stderr,
+                )
+                errors += 1
+            spec_tests[spec.id] = set(records)
 
+        archived_cases = self.archived_case_ids()
         seen_cases: Dict[str, str] = {}
         for task in self.tasks:
             parents = [pid for pid in task.parent_ids if pid in self.nodes and self.nodes[pid].kind == "SPEC"]
@@ -739,6 +787,12 @@ class ArtifactsRepository:
                     print(
                         f"Case absent from test file: {case_id} for {task.id} "
                         f"({task.file_path.name}:{task.line_number})",
+                        file=sys.stderr,
+                    )
+                    errors += 1
+                if case_id in archived_cases:
+                    print(
+                        f"Archived case reused: {case_id} for {task.id}",
                         file=sys.stderr,
                     )
                     errors += 1
@@ -895,6 +949,44 @@ class ArtifactsRepository:
             return
 
         archive_root = self.root / "archive"
+        case_archive_data: Dict[str, Tuple[str, Dict[str, bool]]] = {}
+        for node in archived:
+            if node.kind != "SPEC":
+                continue
+            tests = self.detail_value(node, TESTS_DETAIL_RE)
+            if not tests:
+                print(f"Missing Tests: {node.id}", file=sys.stderr)
+                sys.exit(1)
+            test_path = self.root.parent / tests
+            if not test_path.is_file():
+                print(f"Missing test file: {tests} for {node.id}", file=sys.stderr)
+                sys.exit(1)
+            records = self.test_case_records(test_path.read_text(encoding="utf-8"))
+            if not records:
+                print(f"No case markers: {tests} for {node.id}", file=sys.stderr)
+                sys.exit(1)
+            missing_red = sorted(case_id for case_id, has_red in records.items() if not has_red)
+            if missing_red:
+                print(f"Missing Red marker: {', '.join(missing_red)} in {tests}", file=sys.stderr)
+                sys.exit(1)
+            case_archive_data[node.id] = (tests, records)
+
+        archived_cases = {
+            case_id
+            for _, records in case_archive_data.values()
+            for case_id in records
+        }
+        for node in self.reqs + self.specs + self.tasks:
+            if node.id in archived_ids:
+                continue
+            for case_id in node.case_ids:
+                if case_id in archived_cases:
+                    print(
+                        f"Active reference to archived case: {case_id} in {node.id}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+
         archive_names = {
             "REQ": "REQUIREMENTS.md",
             "SPEC": "SPECS.md",
@@ -917,14 +1009,12 @@ class ArtifactsRepository:
                     archive_root / archive_names[node.kind], node.section, node
                 )
             if node.kind == "SPEC":
-                tests = self.detail_value(node, TESTS_DETAIL_RE)
-                if tests:
-                    test_path = self.root.parent / tests
-                    cases = sorted(self.case_ids_in_text(test_path.read_text(encoding="utf-8")))
+                if node.id in case_archive_data:
+                    tests, records = case_archive_data[node.id]
                     case_path = archive_root / "tests" / f"{node.id}.md"
                     case_path.parent.mkdir(parents=True, exist_ok=True)
                     lines = [f"# Archived Cases: {node.id}", ""]
-                    lines.extend(f"- {case_id}" for case_id in cases)
+                    lines.extend(f"- {case_id}" for case_id in sorted(records))
                     lines.append(f"- Test file: {tests}")
                     case_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
@@ -933,7 +1023,12 @@ class ArtifactsRepository:
             if not node.file_path.is_file():
                 continue
             start = node.line_number - 1
-            end = start + 1 + len(node.details)
+            end = start + 1
+            while end < len(lines):
+                candidate = lines[end]
+                if candidate.startswith("## ") or candidate.startswith("# ") or HEADER_RE.match(candidate):
+                    break
+                end += 1
             by_file.setdefault(node.file_path, []).append((start, end))
         for file_path, ranges in by_file.items():
             lines = file_path.read_text(encoding="utf-8").splitlines()

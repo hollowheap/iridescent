@@ -27,7 +27,7 @@ class IridescentArtifactsTests(unittest.TestCase):
         self.artifacts.mkdir()
         (self.artifacts / "CONTEXT.md").write_text("# Context\n", encoding="utf-8")
         (self.artifacts / "ARCHITECTURE.md").write_text(
-            "# Architecture\n\n## Skill Contracts\n\nContract slice.\n",
+            "# Architecture\n\n## Skill Authoring\n\nAuthoring slice.\n",
             encoding="utf-8",
         )
 
@@ -45,7 +45,9 @@ class IridescentArtifactsTests(unittest.TestCase):
     def write_test_file(self, spec_id: str, *case_ids: str) -> None:
         tests_dir = self.workspace / "tests"
         tests_dir.mkdir(exist_ok=True)
-        lines = [f"# {case_id}" for case_id in case_ids]
+        lines = []
+        for case_id in case_ids:
+            lines.extend([f"# {case_id}: case", "# Red: python3 -B -m unittest"])
         (tests_dir / f"test_{spec_id.lower()}.py").write_text(
             "\n".join(lines) + "\n", encoding="utf-8"
         )
@@ -75,7 +77,7 @@ class IridescentArtifactsTests(unittest.TestCase):
 
     def test_active_decisions_projects_append_only_log(self):
         (self.artifacts / "DECISIONS.md").write_text(
-            "# Decisions\n\n## Skill Contracts\n\n"
+            "# Decisions\n\n## Skill Authoring\n\n"
             "- [x] D01: Accepted choice\n",
             encoding="utf-8",
         )
@@ -86,24 +88,24 @@ class IridescentArtifactsTests(unittest.TestCase):
 
     def test_frontier_and_next_task_handoff(self):
         (self.artifacts / "DECISIONS.md").write_text(
-            "# Decisions\n\n## Skill Contracts\n\n"
+            "# Decisions\n\n## Skill Authoring\n\n"
             "- [ ] D01: Single process\n",
             encoding="utf-8",
         )
         (self.artifacts / "REQUIREMENTS.md").write_text(
-            "# Requirements\n\n## Skill Contracts\n\n"
+            "# Requirements\n\n## Skill Authoring\n\n"
             "- [ ] R01 [D01]: Deliver slice\n  - Verify: echo req\n",
             encoding="utf-8",
         )
         (self.artifacts / "SPECS.md").write_text(
-            "# Specs\n\n## Skill Contracts\n\n"
+            "# Specs\n\n## Skill Authoring\n\n"
             "- [ ] S01 [R01]: Handle request cleanly\n"
             "  - Verify: echo spec\n"
             "  - Tests: tests/test_s01.py\n",
             encoding="utf-8",
         )
         (self.artifacts / "TASKS.md").write_text(
-            "# Tasks\n\n## Skill Contracts\n\n"
+            "# Tasks\n\n## Skill Authoring\n\n"
             "- [x] T01 [S01] [C01]: First task\n"
             "  - Verify: echo t1\n"
             "- [ ] T02 [S01] [C02] [T01]: Dependent task\n"
@@ -132,8 +134,8 @@ class IridescentArtifactsTests(unittest.TestCase):
         archive = self.artifacts / "archive"
         archive.mkdir()
         (archive / "DECISIONS.md").write_text(
-            "# Archived Decisions\n\n## Skill Contracts\n\n"
-            "- [x] D99: Retired decision\n",
+            "# Retired Decisions\n\n## Skill Authoring\n\n"
+            "  - [x] DEC-99: Retired decision\n",
             encoding="utf-8",
         )
 
