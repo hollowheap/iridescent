@@ -1,10 +1,3 @@
-# C1001: C1001 behavior
-# Red: python3 -B -m unittest discover -s tests
-# C1101: C1101 behavior
-# Red: python3 -B -m unittest discover -s tests
-# C1201: C1201 behavior
-# Red: python3 -B -m unittest discover -s tests
-
 from pathlib import Path
 import re
 import unittest

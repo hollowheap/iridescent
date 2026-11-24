@@ -28,7 +28,6 @@ scripts/iridescent-artifacts unconverted-reqs
 scripts/iridescent-artifacts unconverted-decs
 scripts/iridescent-artifacts unconverted-specs
 scripts/iridescent-artifacts undrawn-specs
-scripts/iridescent-artifacts next-cases
 scripts/iridescent-artifacts next-task
 scripts/iridescent-artifacts frontier
 scripts/iridescent-artifacts next-id <r|d|s|t>

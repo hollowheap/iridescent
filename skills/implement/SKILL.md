@@ -14,7 +14,7 @@ disable-model-invocation: true
 1. Run `<skill-dir>/scripts/iridescent-artifacts next-task`; stop immediately if `NONE`.
 2. Read only the task, parent spec, decision, and cited architecture section; route missing contracts or forks to `specify` or `design`.
 3. Load `references/principles.md` for non-trivial edits, plus `references/boundaries.md` when touching APIs, storage, auth, hot paths, or UI.
-4. Run assigned test cases via `references/tdd.md` and confirm red before editing production code.
+4. Run assigned drawn tests via `references/tdd.md` and confirm red before editing production code.
 5. Implement minimal clean code via surgical hunk edits, keeping refactors separate from feature work.
 6. Rerun checks until green, self-audit `git diff`, and append a completion receipt.
 7. Pass minimal task and diff context (not session history) to read-only review and fix findings.

@@ -21,12 +21,11 @@ disable-model-invocation: true
 ## Rules
 
 - Write mode: snapshot; rewrite in place with no retired IDs or markers.
-- Copy `Cxx` IDs from tests into task headers.
 - Treat `TASKS.md` as the single verification source.
 - Sharpen every `Verify` field to a non-human executable command from the start; write zero stubs.
 - Reference live `Sxx` IDs only; never plan against archived IDs.
 - Split refactor work from feature work.
-- Write each task, its detail file, its cases, and its blockers in the same invocation.
+- Write each task, its detail file, and its blockers in the same invocation.
 - Never grill during planning; route clarification to `specify`, `design`, or `draw`.
 - Edit strictly `.artifacts/TASKS.md` and `.artifacts/tasks/<Txx>.md`; never mark parent specs or decisions complete.
 

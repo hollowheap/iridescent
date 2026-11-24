@@ -42,15 +42,10 @@ class IridescentArtifactsTests(unittest.TestCase):
             capture_output=True,
         )
 
-    def write_test_file(self, spec_id: str, *case_ids: str) -> None:
+    def write_test_file(self, spec_id: str) -> None:
         tests_dir = self.workspace / "tests"
         tests_dir.mkdir(exist_ok=True)
-        lines = []
-        for case_id in case_ids:
-            lines.extend([f"# {case_id}: case", "# Red: python3 -B -m unittest"])
-        (tests_dir / f"test_{spec_id.lower()}.py").write_text(
-            "\n".join(lines) + "\n", encoding="utf-8"
-        )
+        (tests_dir / f"test_{spec_id.lower()}.py").write_text("pass\n", encoding="utf-8")
 
     def write_task_detail(self, task_id: str) -> None:
         detail_dir = self.artifacts / "tasks"
@@ -58,7 +53,7 @@ class IridescentArtifactsTests(unittest.TestCase):
         (detail_dir / f"{task_id}.md").write_text(
             f"# Task Detail: {task_id}\n\n"
             "## Steps\n\n"
-            "- Step: reproduce the case.\n\n"
+            "- Step: reproduce the test.\n\n"
             "## Notes\n\n"
             "- none\n\n"
             "## Risk\n\n"
@@ -106,23 +101,23 @@ class IridescentArtifactsTests(unittest.TestCase):
         )
         (self.artifacts / "TASKS.md").write_text(
             "# Tasks\n\n## Skill Authoring\n\n"
-            "- [x] T01 [S01] [C01]: First task\n"
+            "- [x] T01 [S01]: First task\n"
             "  - Verify: echo t1\n"
-            "- [ ] T02 [S01] [C02] [T01]: Dependent task\n"
+            "- [ ] T02 [S01] [T01]: Dependent task\n"
             "  - Verify: echo t2\n",
             encoding="utf-8",
         )
-        self.write_test_file("S01", "C01", "C02")
+        self.write_test_file("S01")
         self.write_task_detail("T01")
         self.write_task_detail("T02")
 
         frontier = self.run_cli("frontier")
         self.assertEqual(frontier.returncode, 0, frontier.stderr)
-        self.assertIn("T02 [S01] [C02] [T01]", frontier.stdout)
+        self.assertIn("T02 [S01] [T01]", frontier.stdout)
 
         nxt = self.run_cli("next-task")
         self.assertEqual(nxt.returncode, 0, nxt.stderr)
-        self.assertIn("TASK - [ ] T02 [S01] [C02] [T01]: Dependent task", nxt.stdout)
+        self.assertIn("TASK - [ ] T02 [S01] [T01]: Dependent task", nxt.stdout)
         self.assertIn("S01 [R01]", nxt.stdout)
         self.assertIn("Tests: tests/test_s01.py", nxt.stdout)
         self.assertIn("Verify: echo t2", nxt.stdout)

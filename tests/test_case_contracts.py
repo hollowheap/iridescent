@@ -1,16 +1,3 @@
-# C0101: C0101 behavior
-# Red: python3 -B -m unittest discover -s tests
-# C0201: C0201 behavior
-# Red: python3 -B -m unittest discover -s tests
-# C0301: C0301 behavior
-# Red: python3 -B -m unittest discover -s tests
-# C0401: C0401 behavior
-# Red: python3 -B -m unittest discover -s tests
-# C0501: C0501 behavior
-# Red: python3 -B -m unittest discover -s tests
-# C0601: C0601 behavior
-# Red: python3 -B -m unittest discover -s tests
-
 from pathlib import Path
 import unittest
 
@@ -62,18 +49,6 @@ class CaseReadinessTests(unittest.TestCase):
         workflow = section(skill_text("plan"), WORKFLOW)
         assert workflow.index("undrawn-specs") < workflow.index("unconverted-specs")
 
-    def test_cli_exposes_next_cases(self):
-        result = run_cli()
-        assert result.returncode != 0
-        assert "next-cases" in result.stderr
-
-    def test_cli_lists_next_cases(self):
-        with workspace() as (root, artifacts):
-            write_graph(artifacts, cases="C01, C02")
-            result = run_cli("next-cases", cwd=root)
-            assert result.returncode == 0, result.stderr
-            assert "T01 C01\nT01 C02" in result.stdout
-
     def test_loop_states_case_gate(self):
         loop = reference_text("how-to-iridescent", "loop.md").replace(chr(96), "")
         assert "red tests before tasks" in loop
@@ -108,15 +83,32 @@ class DetailFieldTests(unittest.TestCase):
         assert "Detail fields" in rules
 
 
-class CaseProofTests(unittest.TestCase):
+class TestProofTests(unittest.TestCase):
     def test_draw_scope_states_focus(self):
-        assert "one case focused on one observable behavior" in section(skill_text("draw"), RULES)
+        assert "one test focused on one observable behavior" in section(skill_text("draw"), RULES)
 
-    def test_draw_scope_names_red_command(self):
-        assert "Red command" in section(skill_text("draw"), RULES)
+    def test_draw_names_spec_verify_command(self):
+        assert "spec `Verify:` command fails" in section(skill_text("draw"), "Verify")
 
-    def test_cases_defines_red_focus(self):
-        assert "one observable behavior per Red command" in section(skill_text("draw"), RULES)
+    def test_draw_keeps_trace_ids_out_of_real_test_files(self):
+        rules = section(skill_text("draw"), RULES)
+        assert "trace IDs" in rules
+        assert "real test files" in rules
+
+    def test_cli_accepts_id_free_test_files(self):
+        with workspace() as (root, artifacts):
+            write_graph(artifacts)
+            result = run_cli("verify-links", cwd=root)
+            assert result.returncode == 0, result.stderr
+            assert result.stdout.strip() == "OK"
+
+    def test_cli_rejects_missing_test_file(self):
+        with workspace() as (root, artifacts):
+            write_graph(artifacts)
+            (root / "tests" / "test_s01.py").unlink()
+            result = run_cli("verify-links", cwd=root)
+            assert result.returncode != 0
+            assert "Missing test file" in result.stderr
 
 
 class PlacementTests(unittest.TestCase):

@@ -12,7 +12,7 @@ Use for non-trivial production changes with an already-drawn failing check.
 
 ## Reproduction
 
-Reproduce the reported failure with a drawn test or command before editing production code. If no test seam exists, record the reproduction command and route the regression case to `draw`.
+Reproduce the reported failure with a drawn test or command before editing production code. If no test seam exists, record the reproduction command and route the regression test to `draw`.
 
 ## Config and eval work
 

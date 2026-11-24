@@ -1,6 +1,3 @@
-# C0801: C0801 behavior
-# Red: python3 -B -m unittest discover -s tests
-
 from pathlib import Path
 import unittest
 
@@ -53,27 +50,23 @@ def write_graph(artifacts, *, old_tree: bool = False):
     )
 
     old_task = (
-        "- [x] T01 [S01] [C0101]: Old task\n  - Verify: echo old task\n"
+        "- [x] T01 [S01]: Old task\n  - Verify: echo old task\n"
         if old_tree
         else ""
     )
     (artifacts / "TASKS.md").write_text(
         "# Tasks\n\n## Skill Contracts\n\n"
         f"{old_task}"
-        "- [x] T02 [S03] [C02]: Make green\n"
+        "- [x] T02 [S03]: Make green\n"
         "  - Verify: echo task\n",
         encoding="utf-8",
     )
 
     tests = artifacts.parent / "tests"
     tests.mkdir(exist_ok=True)
-    (tests / "test_s03.py").write_text(
-        "# C02: case\n# Red: python3 -B -m unittest\n", encoding="utf-8"
-    )
+    (tests / "test_s03.py").write_text("pass\n", encoding="utf-8")
     if old_tree:
-        (tests / "test_s01.py").write_text(
-            "# C0101: case\n# Red: python3 -B -m unittest\n", encoding="utf-8"
-        )
+        (tests / "test_s01.py").write_text("pass\n", encoding="utf-8")
 
     tasks = artifacts / "tasks"
     tasks.mkdir(exist_ok=True)
@@ -127,7 +120,6 @@ class ArchiveRetirementTests(unittest.TestCase):
             self.assertIn("R01", (artifacts / "archive" / "REQUIREMENTS.md").read_text(encoding="utf-8"))
             self.assertIn("S01", (artifacts / "archive" / "SPECS.md").read_text(encoding="utf-8"))
             self.assertIn("T01", (artifacts / "archive" / "TASKS.md").read_text(encoding="utf-8"))
-            self.assertIn("C0101", (artifacts / "archive" / "tests" / "S01.md").read_text(encoding="utf-8"))
             self.assertNotIn("R01", (artifacts / "REQUIREMENTS.md").read_text(encoding="utf-8"))
             self.assertFalse((artifacts / "tasks" / "T01.md").exists())
 

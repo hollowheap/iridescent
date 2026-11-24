@@ -63,7 +63,6 @@ def default_task_detail() -> str:
 def write_graph(
     artifacts: Path,
     *,
-    cases: str = "C01",
     detail: str = "tasks/T01.md",
     extra_detail: bool = False,
 ) -> None:
@@ -85,20 +84,16 @@ def write_graph(
         "  - Tests: tests/test_s01.py\n",
         encoding="utf-8",
     )
-    cases_bracket = f" [{cases}]" if cases else ""
     (artifacts / "TASKS.md").write_text(
         "# Tasks\n\n## Skill Contracts\n\n"
-        f"- [ ] T01 [S01]{cases_bracket}: Make green\n"
+        "- [ ] T01 [S01]: Make green\n"
         "  - Verify: echo task\n",
         encoding="utf-8",
     )
 
     tests_dir = root / "tests"
     tests_dir.mkdir(exist_ok=True)
-    case_lines = [f"# {case_id}" for case_id in cases.split(",") if case_id.strip()]
-    (tests_dir / "test_s01.py").write_text(
-        "\n".join(case_lines) + "\n", encoding="utf-8"
-    )
+    (tests_dir / "test_s01.py").write_text("pass\n", encoding="utf-8")
 
     detail_path = artifacts / (detail or "tasks/T01.md")
     detail_path.parent.mkdir(parents=True, exist_ok=True)

@@ -21,11 +21,6 @@ HEADER_RE = re.compile(
 BRACKET_RE = re.compile(
     r"\[((?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+(?:\s*,\s*(?:REQ-|R|DEC-|D|SPEC-|S|TASK-|T)\d+)*)\]"
 )
-CASE_BRACKET_RE = re.compile(r"\[((?:C\d+)(?:\s*,\s*C\d+)*)\]"
-)
-CASE_MARKER_RE = re.compile(r"^[ \t]*#[ \t]+(C\d+)\b")
-CASE_RED_RE = re.compile(r"^[ \t]*#[ \t]+Red:[ \t]*(.+)$")
-ARCHIVED_CASE_RE = re.compile(r"^[ \t]*-[ \t]*(C\d+)\b")
 BLOCKED_TRAILING_RE = re.compile(
     r"\[((?:TASK-|T)\d+(?:\s*,\s*(?:TASK-|T)\d+)*)\]\s*(?=:|$)", re.IGNORECASE
 )
@@ -35,7 +30,6 @@ ARCH_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*(?:Arch|Architecture):[ \t]*(.+)$", 
 
 TESTS_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Tests:[ \t]*(.+)$", re.IGNORECASE)
 DETAIL_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Detail:[ \t]*(.+)$", re.IGNORECASE)
-CASES_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Cases:[ \t]*(.+)$", re.IGNORECASE)
 SUPERSEDES_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Supersedes:[ \t]*(.+)$", re.IGNORECASE)
 STALE_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Stale:[ \t]*(.+)$", re.IGNORECASE)
 COVERS_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Covers:[ \t]*(.+)$", re.IGNORECASE)
@@ -64,7 +58,6 @@ class Node:
     raw_header: str  # Original line text
     title: str  # Cleaned title description
     parent_ids: List[str] = field(default_factory=list)  # Referenced parent IDs
-    case_ids: List[str] = field(default_factory=list)  # Case IDs carried in task headers
     blocked_by: List[str] = field(default_factory=list)  # For tasks: dependency task IDs
     verify_cmd: Optional[str] = None
     arch_section: Optional[str] = None
@@ -168,32 +161,6 @@ class ArtifactsRepository:
         }
         return {item for item in found if item.startswith(prefix)}
 
-    @staticmethod
-    def test_case_records(text: str) -> Dict[str, bool]:
-        records: Dict[str, bool] = {}
-        current = ""
-        for line in text.splitlines():
-            marker = CASE_MARKER_RE.match(line)
-            if marker:
-                current = marker.group(1)
-                records[current] = False
-                continue
-            if current and CASE_RED_RE.match(line):
-                records[current] = True
-        return records
-
-    def archived_case_ids(self) -> Set[str]:
-        cases: Set[str] = set()
-        archive_tests = self.root / "archive" / "tests"
-        if not archive_tests.is_dir():
-            return cases
-        for path in archive_tests.glob("*.md"):
-            for line in path.read_text(encoding="utf-8").splitlines():
-                match = ARCHIVED_CASE_RE.match(line)
-                if match:
-                    cases.add(match.group(1))
-        return cases
-
     def validate_retirement_scope(self) -> int:
         errors = 0
         forbidden = (SUPERSEDES_DETAIL_RE, STALE_DETAIL_RE, COVERS_DETAIL_RE)
@@ -268,13 +235,6 @@ class ArtifactsRepository:
                     if dep and dep.lower() != "none":
                         blocked_by.append(normalize_id(dep))
 
-                case_ids: List[str] = []
-                for group in CASE_BRACKET_RE.findall(rest):
-                    for part in re.split(r"\s*,\s*", group):
-                        part = part.strip()
-                        if part:
-                            case_ids.append(normalize_id(part))
-
                 parent_ids = []
                 for group in BRACKET_RE.findall(rest):
                     for part in re.split(r"\s*,\s*", group):
@@ -289,7 +249,6 @@ class ArtifactsRepository:
 
                 title = rest
                 title = BRACKET_RE.sub("", title)
-                title = CASE_BRACKET_RE.sub("", title)
                 if verify_cmd:
                     title = VERIFY_INLINE_RE.sub("", title)
                 title = title.strip().lstrip(":").strip().rstrip("|").strip()
@@ -304,7 +263,6 @@ class ArtifactsRepository:
                     parent_ids=parent_ids,
                     blocked_by=blocked_by,
                     verify_cmd=verify_cmd,
-                    case_ids=case_ids,
                     section=section,
                     arch_section=arch_heading if kind == "DEC" else (arch_heading if kind == "SPEC" else None),
                     file_path=path,
@@ -446,19 +404,6 @@ class ArtifactsRepository:
             t for t in self.tasks
             if not t.checked and all(b in done_ids for b in t.blocked_by)
         ]
-
-    def cmd_next_cases(self):
-        ready = self.ready_tasks()
-        if not ready:
-            print("NONE")
-            return
-        task = ready[0]
-        case_ids = list(task.case_ids)
-        if not case_ids:
-            print("NONE")
-            return
-        for case_id in sorted(set(case_ids)):
-            print(f"{task.id} {case_id}")
 
     def cmd_frontier(self):
         ready = self.ready_tasks()
@@ -719,7 +664,6 @@ class ArtifactsRepository:
                 )
                 errors += 1
 
-        spec_tests: Dict[str, Set[str]] = {}
         for spec in self.specs:
             parents = [pid for pid in spec.parent_ids if pid in self.nodes and self.nodes[pid].kind == "REQ"]
             if len(spec.parent_ids) != 1 or len(parents) != 1:
@@ -746,18 +690,6 @@ class ArtifactsRepository:
                 )
                 errors += 1
                 continue
-            records = self.test_case_records(test_path.read_text(encoding="utf-8"))
-            missing_red = sorted(case_id for case_id, has_red in records.items() if not has_red)
-            if missing_red:
-                print(
-                    f"Missing Red marker: {', '.join(missing_red)} in {tests}",
-                    file=sys.stderr,
-                )
-                errors += 1
-            spec_tests[spec.id] = set(records)
-
-        archived_cases = self.archived_case_ids()
-        seen_cases: Dict[str, str] = {}
         for task in self.tasks:
             parents = [pid for pid in task.parent_ids if pid in self.nodes and self.nodes[pid].kind == "SPEC"]
             if len(task.parent_ids) != 1 or len(parents) != 1:
@@ -767,42 +699,6 @@ class ArtifactsRepository:
                     file=sys.stderr,
                 )
                 errors += 1
-            if not task.case_ids:
-                print(
-                    f"Missing Cases: {task.id} ({task.file_path.name}:{task.line_number})",
-                    file=sys.stderr,
-                )
-                errors += 1
-            for case_id in task.case_ids:
-                if not re.fullmatch(r"C\d+", case_id):
-                    print(
-                        f"Invalid case ID: {case_id} for {task.id} "
-                        f"({task.file_path.name}:{task.line_number})",
-                        file=sys.stderr,
-                    )
-                    errors += 1
-                    continue
-                spec_id = parents[0] if parents else ""
-                if spec_id and case_id not in spec_tests.get(spec_id, set()):
-                    print(
-                        f"Case absent from test file: {case_id} for {task.id} "
-                        f"({task.file_path.name}:{task.line_number})",
-                        file=sys.stderr,
-                    )
-                    errors += 1
-                if case_id in archived_cases:
-                    print(
-                        f"Archived case reused: {case_id} for {task.id}",
-                        file=sys.stderr,
-                    )
-                    errors += 1
-                if case_id in seen_cases and seen_cases[case_id] != task.id:
-                    print(
-                        f"Duplicate case owner: {case_id} in {task.id} and {seen_cases[case_id]}",
-                        file=sys.stderr,
-                    )
-                    errors += 1
-                seen_cases[case_id] = task.id
             for blocker in task.blocked_by:
                 node = self.nodes.get(blocker)
                 if not node or node.kind != "TASK":
@@ -816,9 +712,9 @@ class ArtifactsRepository:
             if not (self.root / detail_path).is_file():
                 print(f"Missing Task Detail file: {detail_path} for {task.id}", file=sys.stderr)
                 errors += 1
-            if self.detail_value(task, DETAIL_DETAIL_RE) or self.detail_value(task, CASES_DETAIL_RE):
+            if self.detail_value(task, DETAIL_DETAIL_RE):
                 print(
-                    f"Detail and Cases belong in the task header: {task.id} "
+                    f"Detail belongs in the task header: {task.id} "
                     f"({task.file_path.name}:{task.line_number})",
                     file=sys.stderr,
                 )
@@ -949,43 +845,6 @@ class ArtifactsRepository:
             return
 
         archive_root = self.root / "archive"
-        case_archive_data: Dict[str, Tuple[str, Dict[str, bool]]] = {}
-        for node in archived:
-            if node.kind != "SPEC":
-                continue
-            tests = self.detail_value(node, TESTS_DETAIL_RE)
-            if not tests:
-                print(f"Missing Tests: {node.id}", file=sys.stderr)
-                sys.exit(1)
-            test_path = self.root.parent / tests
-            if not test_path.is_file():
-                print(f"Missing test file: {tests} for {node.id}", file=sys.stderr)
-                sys.exit(1)
-            records = self.test_case_records(test_path.read_text(encoding="utf-8"))
-            if not records:
-                print(f"No case markers: {tests} for {node.id}", file=sys.stderr)
-                sys.exit(1)
-            missing_red = sorted(case_id for case_id, has_red in records.items() if not has_red)
-            if missing_red:
-                print(f"Missing Red marker: {', '.join(missing_red)} in {tests}", file=sys.stderr)
-                sys.exit(1)
-            case_archive_data[node.id] = (tests, records)
-
-        archived_cases = {
-            case_id
-            for _, records in case_archive_data.values()
-            for case_id in records
-        }
-        for node in self.reqs + self.specs + self.tasks:
-            if node.id in archived_ids:
-                continue
-            for case_id in node.case_ids:
-                if case_id in archived_cases:
-                    print(
-                        f"Active reference to archived case: {case_id} in {node.id}",
-                        file=sys.stderr,
-                    )
-                    sys.exit(1)
 
         archive_names = {
             "REQ": "REQUIREMENTS.md",
@@ -1008,20 +867,11 @@ class ArtifactsRepository:
                 self.append_archive_record(
                     archive_root / archive_names[node.kind], node.section, node
                 )
-            if node.kind == "SPEC":
-                if node.id in case_archive_data:
-                    tests, records = case_archive_data[node.id]
-                    case_path = archive_root / "tests" / f"{node.id}.md"
-                    case_path.parent.mkdir(parents=True, exist_ok=True)
-                    lines = [f"# Archived Cases: {node.id}", ""]
-                    lines.extend(f"- {case_id}" for case_id in sorted(records))
-                    lines.append(f"- Test file: {tests}")
-                    case_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-
         by_file: Dict[Path, List[Tuple[int, int]]] = {}
         for node in archived:
             if not node.file_path.is_file():
                 continue
+            lines = node.file_path.read_text(encoding="utf-8").splitlines()
             start = node.line_number - 1
             end = start + 1
             while end < len(lines):
@@ -1065,7 +915,7 @@ class ArtifactsRepository:
 
 def print_usage():
     print(
-        "Usage: iridescent-artifacts <status|active-decisions|archive [--dry-run]|unconverted-reqs|unconverted-decs|unconverted-specs|undrawn-specs|next-cases|next-task|frontier|next-id <r|d|s|t>|tree [ID]|trace <ID>|check|verify-links>",
+        "Usage: iridescent-artifacts <status|active-decisions|archive [--dry-run]|unconverted-reqs|unconverted-decs|unconverted-specs|undrawn-specs|next-task|frontier|next-id <r|d|s|t>|tree [ID]|trace <ID>|check|verify-links>",
         file=sys.stderr,
     )
     sys.exit(2)
@@ -1092,8 +942,6 @@ def main():
         repo.cmd_unconverted_specs()
     elif cmd == "undrawn-specs":
         repo.cmd_undrawn_specs()
-    elif cmd == "next-cases":
-        repo.cmd_next_cases()
     elif cmd == "next-task":
         repo.cmd_next_task()
     elif cmd == "frontier":
