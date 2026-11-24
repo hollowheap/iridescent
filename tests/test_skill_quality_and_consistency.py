@@ -71,6 +71,13 @@ class LifecycleConsistencyTests(unittest.TestCase):
         self.assertIn("expiry", simplicity)
         self.assertIn("human approval", simplicity)
 
+    def test_completion_is_cli_owned(self):
+        implement = read_skill("implement")
+        update = read_skill("update")
+        self.assertIn("complete Txx", implement)
+        self.assertIn("never edit `TASKS.md` directly", implement)
+        self.assertIn("CLI `complete` owns task completion state", update)
+
 
 class SkillFormatTests(unittest.TestCase):
     @staticmethod

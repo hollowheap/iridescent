@@ -13,7 +13,7 @@ disable-model-invocation: true
 
 1. Read newly completed task details and `.artifacts/tasks/quick.md`.
 2. Run only the verify commands recorded in those receipts.
-3. Apply completions, reconcile live indices, and run CLI `archive` for recorded retirement.
+3. Reconcile live indices from CLI completions and run CLI `archive` for recorded retirement.
 4. Keep `Supersedes` only in `DECISIONS.md`; remove retired IDs from live records.
 5. Run `verify-links` and refresh existing persistent review records.
 
@@ -21,6 +21,7 @@ disable-model-invocation: true
 
 - Write mode: snapshot; rewrite in place with no retired IDs or markers.
 - Reconcile only receipts and named records.
+- Never unblock tasks; CLI `complete` owns task completion state.
 - Keep `AGENTS.md` under 500 tokens.
 - Keep live indices live and archived records archived.
 - Run CLI `archive` only after replacement evidence is verified.

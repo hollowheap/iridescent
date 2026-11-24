@@ -26,6 +26,8 @@ BLOCKED_TRAILING_RE = re.compile(
 )
 VERIFY_INLINE_RE = re.compile(r"(?:\||^-)[ \t]*Verify:[ \t]*(.+)$", re.IGNORECASE)
 VERIFY_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Verify:[ \t]*(.+)$", re.IGNORECASE)
+RECEIPT_TASK_RE = re.compile(r"^[ \t]*-[ \t]+Task:[ \t]*(.+)$", re.IGNORECASE)
+RECEIPT_VERIFY_RE = re.compile(r"^[ \t]*-[ \t]+`(.+?)`[ \t]*→[ \t]*(.+)$")
 ARCH_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*(?:Arch|Architecture):[ \t]*(.+)$", re.IGNORECASE)
 
 TESTS_DETAIL_RE = re.compile(r"^[ \t]*-[ \t]*Tests:[ \t]*(.+)$", re.IGNORECASE)
@@ -136,6 +138,64 @@ class ArtifactsRepository:
             if match:
                 values.append(match.group(1).strip().strip("`"))
         return values
+
+    def completion_receipt(self, task_id: str) -> Optional[Tuple[str, str]]:
+        path = self.root / "tasks" / "quick.md"
+        if not path.is_file():
+            return None
+        current = ""
+        receipt: Optional[Tuple[str, str]] = None
+        for line in path.read_text(encoding="utf-8").splitlines():
+            task_match = RECEIPT_TASK_RE.match(line)
+            if task_match:
+                current = normalize_id(task_match.group(1).strip().strip("`"))
+                continue
+            verify_match = RECEIPT_VERIFY_RE.match(line)
+            if verify_match and current == task_id:
+                receipt = (verify_match.group(1).strip(), verify_match.group(2).strip())
+        return receipt
+
+    def cmd_complete(self, target_id: str) -> None:
+        tid = normalize_id(target_id)
+        node = self.nodes.get(tid)
+        if not node or node.kind != "TASK":
+            print(f"Unknown task: {target_id}", file=sys.stderr)
+            sys.exit(1)
+        if node.checked:
+            print(f"Task already complete: {tid}", file=sys.stderr)
+            sys.exit(1)
+        for blocker in node.blocked_by:
+            dep = self.nodes.get(blocker)
+            if not dep or not dep.checked:
+                print(f"Open blocker: {blocker} for {tid}", file=sys.stderr)
+                sys.exit(1)
+        receipt = self.completion_receipt(tid)
+        if not receipt:
+            print(f"Missing completion receipt: {tid}", file=sys.stderr)
+            sys.exit(1)
+        expected = (node.verify_cmd or "").strip().strip("`").strip()
+        command, result = receipt
+        if not expected:
+            print(f"Missing Verify: {tid}", file=sys.stderr)
+            sys.exit(1)
+        if command != expected:
+            print(f"Verify mismatch: {tid} expected {expected}, got {command}", file=sys.stderr)
+            sys.exit(1)
+        if not result:
+            print(f"Empty receipt result: {tid}", file=sys.stderr)
+            sys.exit(1)
+        lines = node.file_path.read_text(encoding="utf-8").splitlines()
+        index = node.line_number - 1
+        if index < 0 or index >= len(lines):
+            print(f"Missing task line: {tid}", file=sys.stderr)
+            sys.exit(1)
+        header = HEADER_RE.match(lines[index])
+        if not header or normalize_id(header.group(2)) != tid:
+            print(f"Stale task location: {tid}", file=sys.stderr)
+            sys.exit(1)
+        lines[index] = lines[index].replace("[ ]", "[x]", 1)
+        node.file_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+        print(f"Completed {tid}")
 
     def superseded_ids(self) -> Set[str]:
         superseded: Set[str] = set()
@@ -915,7 +975,7 @@ class ArtifactsRepository:
 
 def print_usage():
     print(
-        "Usage: iridescent-artifacts <status|active-decisions|archive [--dry-run]|unconverted-reqs|unconverted-decs|unconverted-specs|undrawn-specs|next-task|frontier|next-id <r|d|s|t>|tree [ID]|trace <ID>|check|verify-links>",
+        "Usage: iridescent-artifacts <status|active-decisions|archive [--dry-run]|unconverted-reqs|unconverted-decs|unconverted-specs|undrawn-specs|next-task|complete <Txx>|frontier|next-id <r|d|s|t>|tree [ID]|trace <ID>|check|verify-links>",
         file=sys.stderr,
     )
     sys.exit(2)
@@ -944,6 +1004,11 @@ def main():
         repo.cmd_undrawn_specs()
     elif cmd == "next-task":
         repo.cmd_next_task()
+    elif cmd == "complete":
+        if len(sys.argv) < 3:
+            print("Error: ID required for complete subcommand", file=sys.stderr)
+            sys.exit(2)
+        repo.cmd_complete(sys.argv[2])
     elif cmd == "frontier":
         repo.cmd_frontier()
     elif cmd == "next-id":

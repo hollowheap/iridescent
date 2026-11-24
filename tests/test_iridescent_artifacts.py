@@ -61,6 +61,51 @@ class IridescentArtifactsTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def write_receipt(self, task_id: str, command: str, result: str = "OK") -> None:
+        tasks_dir = self.artifacts / "tasks"
+        tasks_dir.mkdir(exist_ok=True)
+        lines = [
+            "## 2026-01-01 — receipt",
+            "",
+            f"- Task: {task_id}",
+            "",
+            "## Verify",
+            "",
+            f"- `{command}` → {result}",
+            "",
+        ]
+        (tasks_dir / "quick.md").write_text("\n".join(lines), encoding="utf-8")
+
+    def write_open_task_graph(self) -> None:
+        (self.artifacts / "DECISIONS.md").write_text(
+            "# Decisions\n\n## Skill Authoring\n\n"
+            "- [ ] D01: Single process\n",
+            encoding="utf-8",
+        )
+        (self.artifacts / "REQUIREMENTS.md").write_text(
+            "# Requirements\n\n## Skill Authoring\n\n"
+            "- [ ] R01 [D01]: Deliver slice\n  - Verify: echo req\n",
+            encoding="utf-8",
+        )
+        (self.artifacts / "SPECS.md").write_text(
+            "# Specs\n\n## Skill Authoring\n\n"
+            "- [ ] S01 [R01]: Handle request cleanly\n"
+            "  - Verify: echo spec\n"
+            "  - Tests: tests/test_s01.py\n",
+            encoding="utf-8",
+        )
+        (self.artifacts / "TASKS.md").write_text(
+            "# Tasks\n\n## Skill Authoring\n\n"
+            "- [ ] T01 [S01]: First task\n"
+            "  - Verify: echo t1\n"
+            "- [ ] T02 [S01] [T01]: Dependent task\n"
+            "  - Verify: echo t2\n",
+            encoding="utf-8",
+        )
+        self.write_test_file("S01")
+        self.write_task_detail("T01")
+        self.write_task_detail("T02")
+
     def test_status_and_verify_links_on_empty_graph(self):
         status = self.run_cli("status")
         self.assertEqual(status.returncode, 0, status.stderr)
@@ -124,6 +169,35 @@ class IridescentArtifactsTests(unittest.TestCase):
 
         verify = self.run_cli("verify-links")
         self.assertEqual(verify.returncode, 0, verify.stderr)
+
+    def test_complete_marks_task_and_unblocks_dependent(self):
+        self.write_open_task_graph()
+        self.write_receipt("T01", "echo t1")
+
+        result = self.run_cli("complete", "T01")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Completed T01", result.stdout)
+        self.assertIn("- [x] T01 [S01]", (self.artifacts / "TASKS.md").read_text(encoding="utf-8"))
+
+        nxt = self.run_cli("next-task")
+        self.assertEqual(nxt.returncode, 0, nxt.stderr)
+        self.assertIn("T02", nxt.stdout)
+
+    def test_complete_requires_matching_receipt(self):
+        self.write_open_task_graph()
+        self.write_receipt("T01", "echo wrong")
+
+        result = self.run_cli("complete", "T01")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Verify mismatch", result.stderr)
+
+    def test_complete_rejects_open_blocker(self):
+        self.write_open_task_graph()
+        self.write_receipt("T02", "echo t2")
+
+        result = self.run_cli("complete", "T02")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Open blocker", result.stderr)
 
     def test_next_id_skips_archived_ids(self):
         archive = self.artifacts / "archive"
